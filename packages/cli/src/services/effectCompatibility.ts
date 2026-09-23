@@ -18,27 +18,24 @@ export const SUPPORTED_EFFECT_PEER_RANGE = "4.0.0-rc.116";
  */
 export const REQUIRED_EFFECT_VERSION = "4.0.0-rc.116";
 
-const BUILT_IN_PLAIN_PLUGINS = new Set([
-  "aws-cdk",
-  "clients",
-  "server",
-  "types",
-]);
+/** Built-in projections whose generators and output never use Effect. */
+const PLAIN_PLUGINS = new Set(["aws-cdk", "clients", "server", "types"]);
 
-const EFFECT_NATIVE_PLUGINS = new Set([
-  "effect",
-  "@rexeus/typeweaver-effect",
-  "command",
-  "@rexeus/typeweaver-command",
-  "hono",
-  "@rexeus/typeweaver-hono",
-  "openapi",
-  "@rexeus/typeweaver-openapi",
-]);
+/**
+ * CLI-hosted first-party generators are Effect-native, but the CLI imports
+ * them from its own dependency tree, so they run on the CLI's exact Effect
+ * runtime. Their generated output imports no Effect, so the project needs no
+ * Effect of its own for them.
+ */
+const CLI_HOSTED_PLUGINS = new Set(["command", "hono", "openapi"]);
+
+/** The projection whose generated output imports the project's Effect. */
+const EFFECT_PROJECTION_PLUGIN = "effect";
 
 export type ConfiguredPluginClassification = {
   readonly plain: readonly string[];
-  readonly effect: readonly string[];
+  readonly cliHosted: readonly string[];
+  readonly effectProjection: readonly string[];
   readonly external: readonly string[];
 };
 
@@ -68,19 +65,21 @@ const builtInPluginName = (specifier: string): string =>
 const pluginKind = (
   specifier: string
 ): keyof ConfiguredPluginClassification => {
-  if (EFFECT_NATIVE_PLUGINS.has(specifier)) {
-    return "effect";
+  const name = builtInPluginName(specifier);
+  if (name === EFFECT_PROJECTION_PLUGIN) {
+    return "effectProjection";
   }
-  return BUILT_IN_PLAIN_PLUGINS.has(builtInPluginName(specifier))
-    ? "plain"
-    : "external";
+  if (CLI_HOSTED_PLUGINS.has(name)) {
+    return "cliHosted";
+  }
+  return PLAIN_PLUGINS.has(name) ? "plain" : "external";
 };
 
 export const classifyConfiguredPlugins = (
   plugins: readonly PluginEntry[]
 ): ConfiguredPluginClassification => {
   const classification: Record<keyof ConfiguredPluginClassification, string[]> =
-    { plain: [], effect: [], external: [] };
+    { plain: [], cliHosted: [], effectProjection: [], external: [] };
   for (const entry of plugins) {
     const specifier = pluginSpecifier(entry);
     classification[pluginKind(specifier)].push(specifier);
@@ -88,17 +87,28 @@ export const classifyConfiguredPlugins = (
   return classification;
 };
 
-const nativeSurfaces = (
+/**
+ * Surfaces that load Effect from the project's own dependency tree: the
+ * effect projection's generated handlers and custom plugins.
+ */
+const projectEffectSurfaces = (
   classification: ConfiguredPluginClassification
-): readonly string[] => [...classification.effect, ...classification.external];
+): readonly string[] => [
+  ...classification.effectProjection,
+  ...classification.external,
+];
 
-const skipCheck = (): DoctorCheck =>
+const cliHostedNote = (cliHosted: readonly string[]): string =>
+  cliHosted.length === 0
+    ? ""
+    : ` The configured CLI-hosted generators (${cliHosted.join(", ")}) run on the CLI's own Effect ${REQUIRED_EFFECT_VERSION} runtime, and their generated output does not import Effect.`;
+
+const skipCheck = (cliHosted: readonly string[]): DoctorCheck =>
   createDoctorCheck({
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "skip",
-    message:
-      "The project does not declare an Effect dependency or peer, and no Effect-native or custom plugin is configured, so workspace Effect compatibility is not applicable.",
+    message: `The project does not declare an Effect dependency or peer, and neither the effect projection nor a custom plugin is configured, so workspace Effect compatibility is not applicable.${cliHostedNote(cliHosted)}`,
   });
 
 const passCheck = (version: string): DoctorCheck =>
@@ -123,16 +133,19 @@ const failNotDeclaredNativeCheck = (surfaces: readonly string[]): DoctorCheck =>
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "fail",
-    message: `The project does not declare Effect, but these configured surfaces require a project-owned Effect ${SUPPORTED_EFFECT_PEER_RANGE} runtime: ${surfaces.join(", ")}. The TypeWeaver CLI's nested Effect runtime cannot satisfy generated plugin or adapter contracts.`,
-    hint: `Declare effect ${SUPPORTED_EFFECT_PEER_RANGE} in the project, or select only built-in plain projections.`,
+    message: `The project does not declare Effect, but these configured surfaces require a project-owned Effect ${SUPPORTED_EFFECT_PEER_RANGE} runtime: ${surfaces.join(", ")}. The TypeWeaver CLI's own Effect runtime cannot satisfy generated Effect adapter or custom plugin contracts.`,
+    hint: `Declare effect ${SUPPORTED_EFFECT_PEER_RANGE} in the project, or configure only built-in projections other than effect.`,
   });
 
-const warnUnsupportedCheck = (version: string): DoctorCheck =>
+const warnUnsupportedCheck = (
+  version: string,
+  cliHosted: readonly string[]
+): DoctorCheck =>
   createDoctorCheck({
     code: "TW-DOCTOR-011",
     name: "workspace Effect compatibility",
     outcome: "warn",
-    message: `The project resolves Effect ${version}, not the exact native TypeWeaver requirement ${REQUIRED_EFFECT_VERSION}. The binary CLI's own runtime is independent, but the programmatic API, generator plugins, first-party plugins, and adapter are not verified with this project runtime.`,
+    message: `The project resolves Effect ${version}, not the exact native TypeWeaver requirement ${REQUIRED_EFFECT_VERSION}. The CLI binary's own runtime is independent, but the programmatic API, the effect projection, custom plugins, and the adapter are not verified with this project runtime.${cliHostedNote(cliHosted)}`,
     hint: `Install effect ${REQUIRED_EFFECT_VERSION} before using an Effect-native TypeWeaver surface.`,
   });
 
@@ -145,7 +158,7 @@ const failEffect4Check = (
     name: "workspace Effect compatibility",
     outcome: "fail",
     message: `The project resolves Effect ${version}, but these configured surfaces require the exact native TypeWeaver runtime ${REQUIRED_EFFECT_VERSION}: ${surfaces.join(", ")}.`,
-    hint: `Run this project on ${REQUIRED_EFFECT_VERSION}, or use built-in plain projections.`,
+    hint: `Run this project on ${REQUIRED_EFFECT_VERSION}, or configure only built-in projections other than effect.`,
   });
 
 const failUnrecognizedCheck = (version: string): DoctorCheck =>
@@ -154,7 +167,7 @@ const failUnrecognizedCheck = (version: string): DoctorCheck =>
     name: "workspace Effect compatibility",
     outcome: "fail",
     message: `The project declares an unrecognized Effect version '${version}', so workspace compatibility cannot be established.`,
-    hint: `Install Effect ${SUPPORTED_EFFECT_PEER_RANGE} or use built-in plain projections.`,
+    hint: `Install Effect ${SUPPORTED_EFFECT_PEER_RANGE} or configure only built-in projections other than effect.`,
   });
 
 /**
@@ -163,7 +176,7 @@ const failUnrecognizedCheck = (version: string): DoctorCheck =>
  */
 const classifyResolvedEffect = (
   version: string,
-  surfaces: readonly string[]
+  classification: ConfiguredPluginClassification
 ): DoctorCheck => {
   if (parse(version) === null) {
     return failUnrecognizedCheck(version);
@@ -171,33 +184,35 @@ const classifyResolvedEffect = (
   if (version === REQUIRED_EFFECT_VERSION) {
     return passCheck(version);
   }
+  const surfaces = projectEffectSurfaces(classification);
   if (surfaces.length > 0) {
     return failEffect4Check(version, surfaces);
   }
-  return warnUnsupportedCheck(version);
+  return warnUnsupportedCheck(version, classification.cliHosted);
 };
 
 /**
  * Pure classification of a project-owned, declaration-verified Effect
  * resolution and configured plugin specifiers. It never resolves modules or
  * inspects the CLI's own runtime, so callers control every fact in the
- * decision.
+ * decision. Only the effect projection and custom plugins need the project's
+ * own Effect; plain and CLI-hosted plugins never make the check fail.
  */
 export const classifyWorkspaceEffectCompatibility = (
   facts: WorkspaceEffectCompatibilityFacts
 ): DoctorCheck => {
   const { workspaceEffect } = facts;
   const classification = classifyConfiguredPlugins(facts.configuredPlugins);
-  const surfaces = nativeSurfaces(classification);
   if (workspaceEffect._tag === "NotDeclared") {
+    const surfaces = projectEffectSurfaces(classification);
     return surfaces.length > 0
       ? failNotDeclaredNativeCheck(surfaces)
-      : skipCheck();
+      : skipCheck(classification.cliHosted);
   }
   if (workspaceEffect._tag === "Unresolved") {
     return failUnresolvedCheck(workspaceEffect.detail);
   }
-  return classifyResolvedEffect(workspaceEffect.version, surfaces);
+  return classifyResolvedEffect(workspaceEffect.version, classification);
 };
 
 export const checkWorkspaceEffectCompatibility = (

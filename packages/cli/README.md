@@ -323,6 +323,13 @@ packages (including `command`, `hono`, and `openapi`), and the Effect adapter sh
 `effect@4.0.0-rc.116` runtime identity. `typeweaver doctor` checks the project declaration as
 `TW-DOCTOR-011` and the CLI's own runtime as `TW-DOCTOR-008`.
 
+The CLI imports its first-party generators from its own dependency tree, so the CLI-hosted
+`command`, `hono`, and `openapi` generators run on the CLI's exact Effect and need no project
+Effect. `TW-DOCTOR-011` therefore fails only when the `effect` projection or a custom plugin is
+configured and the project does not resolve its own `effect@4.0.0-rc.116`. Without those plugins, a
+project that does not declare Effect is skipped, and a project on another Effect version gets a
+warning.
+
 Core authoring and generated plain outputs remain Effect-optional because generated modules do not
 import Effect. This output claim does not make the generator packages optional: the command and
 OpenAPI packages import Effect directly. The migration changes visible Effect APIs including

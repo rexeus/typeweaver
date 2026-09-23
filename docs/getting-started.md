@@ -523,10 +523,12 @@ It checks the runtime, config and spec resolution, plugin availability, output s
 Effect compatibility, and formatting setup. Deep mode also bundles, normalizes, and validates the
 contract without publishing output. `doctor` reports the project-declared Effect (`TW-DOCTOR-011`)
 separately from the CLI's own runtime (`TW-DOCTOR-008`). Effect-native surfaces require the exact
-`effect@4.0.0-rc.116` pin; plain generated projections remain Effect-optional. A project that does
-not declare Effect is skipped only when no Effect-native or custom plugin is configured; otherwise
-it fails because those surfaces need a project-owned native runtime. See
-[ADR 0008](./adr/0008-effect-4-baseline.md).
+`effect@4.0.0-rc.116` pin; plain generated projections remain Effect-optional. The CLI-hosted
+first-party generators `hono`, `openapi`, and `command` load from the CLI's own dependencies and run
+on its exact Effect, and their output does not import Effect, so they need no project Effect. The
+`effect` projection and custom plugins do: with either configured, a project that does not declare
+Effect, or declares a version other than `4.0.0-rc.116`, fails. Otherwise an undeclared project is
+skipped and another version only warns. See [ADR 0008](./adr/0008-effect-4-baseline.md).
 
 Typical causes:
 
