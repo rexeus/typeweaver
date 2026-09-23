@@ -51,11 +51,14 @@ package source and the package test overlay:
 | `typescript/no-unsafe-call`              | Reject calls on `any`.                                                         |
 | `typescript/no-unsafe-member-access`     | Reject member access on `any`.                                                 |
 | `typescript/no-unsafe-return`            | Reject returning `any` from a typed function.                                  |
+| `typescript/no-unsafe-type-assertion`    | Reject `as` assertions that narrow a type.                                     |
 | `typescript/switch-exhaustiveness-check` | Require exhaustive switches over unions and enums.                             |
 
 `typescript/ban-ts-comment` allows `@ts-expect-error` only with a description of at least three
-characters, which is the form the type tests use. `typescript/no-unsafe-type-assertion` is not
-enabled yet: it reports 339 existing assertions and remains a known gap.
+characters, which is the form the type tests use. `typescript/no-unsafe-type-assertion` rejects
+every `as` assertion that narrows a type in source and tests; narrow with type guards, overloads, or
+validation instead, and pass deliberately invalid test input through the named unchecked-input
+helpers of the suite.
 
 The root profile also enforces `eslint/no-eval`, `eslint/no-implied-eval`, `eslint/no-new-func`,
 `unicorn/prefer-node-protocol`, the local `typeweaver/pure-barrel` rule, and the import hygiene
@@ -147,16 +150,16 @@ stale entry can never remain silent.
 
 ## Executable contracts
 
-| Command                          | Contract it proves                                                                                                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:maintainability-lint` | Exact boundaries for the 10 maintainability rules, the allowlist scanner and its `ignorePatterns` agreement, and the no-ESLint guard.                                                                   |
-| `pnpm test:lint-policy`          | 25 lint rule cases (3 TS-directive bans), 250/350 file-size, cognitive, dependency, barrel, test-scope, output-lookalike, unused-disable, `--deny-warnings`, and 23 configuration-weakening rejections. |
-| `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles, and base strictness in every repository `tsconfig*.json`.                                                                     |
-| `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.                                                           |
-| `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                                                             |
-| `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                                                                |
-| `pnpm verify:test-gates`         | Vitest file filters in package scripts name whole suite directories or unsplit test files; stale, bare, and split-suite filters fail.                                                                   |
-| `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                                                                           |
+| Command                          | Contract it proves                                                                                                                                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:maintainability-lint` | Exact boundaries for the 10 maintainability rules, the allowlist scanner and its `ignorePatterns` agreement, and the no-ESLint guard.                                                                                           |
+| `pnpm test:lint-policy`          | 28 lint rule cases (3 TS-directive bans, 1 unsafe-assertion ban), 250/350 file-size, cognitive, dependency, barrel, test-scope, output-lookalike, unused-disable, `--deny-warnings`, and 25 configuration-weakening rejections. |
+| `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles, and base strictness in every repository `tsconfig*.json`.                                                                                             |
+| `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.                                                                                   |
+| `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                                                                                     |
+| `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                                                                                        |
+| `pnpm verify:test-gates`         | Vitest file filters in package scripts name whole suite directories or unsplit test files; stale, bare, and split-suite filters fail.                                                                                           |
+| `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                                                                                                   |
 
 `pnpm verify:architecture-contracts` runs the compiler-profile, lint-policy, maintainability,
 scripts-typecheck, root-tooling, quality-task, and Vitest gate-filter guards in a deterministic

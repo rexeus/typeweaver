@@ -141,6 +141,22 @@ export const mutationCases = [
     },
   },
   {
+    label: "unsafe type assertions allowed in TypeScript source",
+    mutate: config => {
+      delete overrideFor(config, expectedTypeScriptFiles).rules[
+        "typescript/no-unsafe-type-assertion"
+      ];
+    },
+  },
+  {
+    label: "unsafe type assertions allowed in tests",
+    mutate: config => {
+      overrideFor(config, expectedTypedTestFiles).rules[
+        "typescript/no-unsafe-type-assertion"
+      ] = "warn";
+    },
+  },
+  {
     label: "ts-ignore allowed in TypeScript source",
     mutate: config => {
       overrideFor(config, expectedTypeScriptFiles).rules[
