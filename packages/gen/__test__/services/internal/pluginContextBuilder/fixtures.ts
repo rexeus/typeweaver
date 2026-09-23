@@ -162,7 +162,7 @@ export const UNSUPPORTED_FILESYSTEM_OPERATION_CODES = [
 
 export const isUnsupportedFilesystemOperationError = (
   error: unknown
-): boolean => {
+): error is FileSystemError => {
   if (!(error instanceof Error)) {
     return false;
   }

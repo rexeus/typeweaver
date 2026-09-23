@@ -12,7 +12,7 @@ import {
   anInlineResponse,
   anOperation,
   aSpec,
-  captureNormalizeError,
+  captureNormalizeErrorOf,
   normalizeSpec,
   theOnlyOperationIn,
 } from "./fixtures.js";
@@ -220,9 +220,9 @@ describe("normalizeSpec empty definitions", () => {
   test("rejects resources without operations", () => {
     const spec = aSpec({ todos: { operations: [] } });
 
-    const error = captureNormalizeError(spec);
+    const error = captureNormalizeErrorOf(spec, EmptyResourceOperationsError);
     expect(error).toBeInstanceOf(EmptyResourceOperationsError);
-    expect((error as EmptyResourceOperationsError).resourceName).toBe("todos");
+    expect(error.resourceName).toBe("todos");
   });
 
   test("rejects operations without responses", () => {
@@ -232,8 +232,8 @@ describe("normalizeSpec empty definitions", () => {
       },
     });
 
-    const error = captureNormalizeError(spec);
+    const error = captureNormalizeErrorOf(spec, EmptyOperationResponsesError);
     expect(error).toBeInstanceOf(EmptyOperationResponsesError);
-    expect((error as EmptyOperationResponsesError).operationId).toBe("noResp");
+    expect(error.operationId).toBe("noResp");
   });
 });

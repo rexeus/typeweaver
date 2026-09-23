@@ -13,11 +13,15 @@ import {
 } from "./fixtures.js";
 import type { FileSystemError } from "./fixtures.js";
 
-const isHardlinkUnsupportedError = (error: unknown): boolean => {
+const isHardlinkUnsupportedError = (
+  error: unknown
+): error is FileSystemError => {
   return isUnsupportedFilesystemOperationError(error);
 };
 
-const isFileModeUnsupportedError = (error: unknown): boolean => {
+const isFileModeUnsupportedError = (
+  error: unknown
+): error is FileSystemError => {
   return isUnsupportedFilesystemOperationError(error);
 };
 
@@ -46,7 +50,7 @@ const detectHardlinkCapability = (): HardlinkCapability => {
     return { supported: true };
   } catch (error) {
     if (isHardlinkUnsupportedError(error)) {
-      const errorCode = (error as FileSystemError).code;
+      const errorCode = error.code;
 
       return {
         supported: false,
@@ -92,7 +96,7 @@ const detectFileModeCapability = (): FileModeCapability => {
     return { supported: true };
   } catch (error) {
     if (isFileModeUnsupportedError(error)) {
-      const errorCode = (error as FileSystemError).code;
+      const errorCode = error.code;
 
       return {
         supported: false,
