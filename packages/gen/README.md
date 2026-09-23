@@ -30,8 +30,10 @@ pnpm add -D \
 ```
 
 The exact supported Effect peer is `4.0.0-rc.116`. Keep one native Effect identity in the dependency
-graph. The lifecycle uses RC.116 APIs including `Context.Service`, `Result`, `Cause`, and
-`Schema.decodeUnknownEffect`; confirm uncertain signatures against the pinned source commit in
+graph. The package uses RC.116 APIs: `Context.Service` services, a `Result` for plugin dependency
+ordering, `Layer` and `Scope` lifetimes in `defineScopedPlugin`, `Cause` inspection in the plugin
+test kit, and the `effect` `FileSystem` service, whose failures surface as `PlatformError`. Confirm
+uncertain signatures against the pinned source commit in
 [ADR 0008](../../docs/adr/0008-effect-4-baseline.md).
 
 ## The normalized model is the extension boundary

@@ -8,10 +8,15 @@ import {
 import type { SafeGeneratedFilePath } from "../../helpers/pathSafety.js";
 
 /**
- * Per-call tracker over generated paths. Each builder invocation gets its own
- * tracker so concurrent generation runs cannot observe one another's state.
- * The pending log queue records synchronous writes for the Effect orchestrator
- * because the sync callback runs outside an Effect runtime.
+ * Per-call tracker over the set of generated file paths. Each
+ * `createPluginContextBuilder` invocation gets its own tracker so concurrent
+ * generation runs cannot observe one another's state.
+ *
+ * `drainPendingWriteLogs` returns (and clears) the paths written via
+ * `writeFile` since the previous drain. The Effect-native orchestrator
+ * flushes this queue through `Effect.logInfo` after each plugin's
+ * `generate` stage — the sync write callback itself runs outside any
+ * Effect runtime, so it cannot log through the configured logger directly.
  */
 export type GeneratedFilesTracker = {
   readonly add: (filePath: string) => void;
@@ -36,6 +41,11 @@ export const createGeneratedFilesTracker = (): GeneratedFilesTracker => {
     },
   };
 };
+/**
+ * Narrow sync filesystem port for the contractually synchronous plugin writer.
+ * It stays internal to `@rexeus/typeweaver-gen`: plugin authors continue to
+ * consume only `GeneratorContext.writeFile`.
+ */
 export type SyncAtomicFileSystem = {
   readonly getExistingFileMode: (absolutePath: string) => number | undefined;
   readonly makeTempDirectory: (prefixPath: string) => string;
@@ -77,6 +87,12 @@ export const liveSyncAtomicFileSystem: SyncAtomicFileSystem = {
  * The destination is revalidated immediately before publication, preserving
  * path-safety checks across the unavoidable pathname-based rename race. The
  * narrow filesystem port keeps mode preservation and cleanup injectable.
+ *
+ * Sync twin of `writeFileViaTempReplaceEffect` for the contractually sync
+ * plugin-author surface (ADR 0003/0004). Same atomic-replace pattern (mkdtemp
+ * + write + chmod preservation + rename). Every plugin write still funnels
+ * through `pathSafety.validateGeneratedPath(...)`, so path traversal cannot
+ * reach this surface.
  */
 export const writeFileViaTempReplaceWith = (
   fileSystem: SyncAtomicFileSystem,
@@ -106,14 +122,22 @@ export const writeFileViaTempReplaceWith = (
     );
     if (existingFileMode !== undefined)
       fileSystem.chmod(tempFile, existingFileMode);
+    // Re-probe immediately before publication. This rejects ancestor symlink
+    // swaps visible at check time and narrows the unavoidable race window of
+    // Node's pathname-based rename API.
     const publishPath = config.revalidateDestination();
+    // Both operations are synchronous: once rename publishes the destination,
+    // record the write before any fallible cleanup can run. A cleanup-only
+    // failure may still be reported, but it cannot leave a committed file
+    // absent from the generated-file tracker and pending log queue.
     fileSystem.rename(tempFile, publishPath.fullPath);
     config.onCommit(publishPath.generatedPath);
   } catch (operationError) {
     try {
       fileSystem.removeDirectory(tempDir);
     } catch {
-      /* Preserve the original write failure. */
+      // Preserve the writer's original failure: a cleanup error is secondary
+      // and must not erase the rename/write defect callers need to diagnose.
     }
     throw operationError;
   }

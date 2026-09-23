@@ -30,15 +30,39 @@ generic guides as archived conceptual material.
    overwrite a dirty checkout. `pnpm verify:effect-reference` checks version, origin, and commit.
 4. **Effect diagnostics run without patching TypeScript or Oxlint.** The standalone `@effect/tsgo`
    diagnostics CLI is pinned and invoked with the Recommended severity map for every Effect-bearing
-   TypeScript project. Its file list is the independent scope authority: diagnostics from every
-   authored file remain visible, including files without a direct Effect import; only explicit
-   generated output directories are excluded. Recommended errors always fail. Warnings fail by
-   default as well: the only nonblocking warnings are exact named rules at exact path categories in
-   `scripts/lib/effect-diagnostics.mjs` (process/test boundary style rules and the architectural
-   `nodeBuiltinImport` rule). Correctness rules such as `floatingEffect`,
-   `missingStarInYieldEffectGen`, and unused directives remain blocking even at those paths; unknown
-   future warning names fail closed. The retained inline exception allowlist is currently empty, and
-   stale directives fail closed. Run `pnpm effect:diagnostics` locally.
+   TypeScript project. Its file list is the independent scope authority: every authored file is
+   checked, including files without a direct Effect import; only build and generated output
+   directories (`dist/`, `node_modules/`, `output/`, `outputs/`) and the gate's own probe fixtures
+   under `packages/cli/test-fixtures/effect-diagnostics/` are excluded. Recommended errors always
+   fail. Warnings fail by default as well: the only nonblocking warnings are named rules that
+   `scripts/lib/effect-diagnostics-policy.mjs` exempts within three path categories. The categories
+   are mostly path prefixes, not single files:
+   - `test-example-boundary` exempts named style and boundary rules, such as `asyncFunction`,
+     `globalTimers`, and `nodeBuiltinImport`, in every `__test__/` and `examples/` directory;
+   - `production-boundary` exempts named style and boundary rules, such as `asyncFunction`,
+     `globalConsole`, and `processEnv`, in six CLI entry and command files,
+     `packages/effect/src/runtime.ts`, and `packages/openapi/src/openApiPlugin.ts`, and in whole
+     directories: `packages/cli/src/services/`, `packages/gen/src/services/`, the `src/lib/` trees
+     of `clients`, `command`, `hono`, and `server`, `packages/types/src/lib/errors/`, and all of
+     `packages/test-utils/src/`;
+   - `architectural-node-builtin-boundary` exempts `nodeBuiltinImport` in the whole `src/` tree of
+     every package except `core`, `tsconfig`, `zod-to-json-schema`, and `zod-to-ts`.
+
+   Exempted warnings stay visible without blocking: every run prints their count per category and
+   rule, and `pnpm effect:diagnostics --list-exempted` lists each one with its location. Correctness
+   rules such as `floatingEffect`, `missingStarInYieldEffectGen`, and unused directives remain
+   blocking in every category; unknown future warning names fail closed. The retained inline
+   exception allowlist is currently empty, and stale directives fail closed. Run
+   `pnpm effect:diagnostics` locally.
+
+5. **Additional Effect packages are an exact, minimal allowlist.** `acceptedEffectDependencies` in
+   `config/effect-baseline.json` names every `@effect/*` dependency or devDependency a workspace
+   package may declare, each pinned to `4.0.0-rc.116`; `@effect/tsgo` is pinned separately. The CLI
+   takes its Node platform layers (`NodeFileSystem`, `NodePath`, `NodeStdio`, `NodeTerminal`,
+   `NodeChildProcessSpawner`) and `NodeRuntime.runMain` from `@effect/platform-node-shared`. It does
+   not depend on `@effect/platform-node`, which re-exports the same modules but declares a required
+   `redis` peer and would install a Redis client that the CLI never uses. The packed-consumer gate
+   fails if a fresh install contains `@effect/platform-node` or `redis`.
 
 ### Effect 3 → native Effect 4.0.0-rc.116
 
@@ -72,6 +96,7 @@ generator packages themselves are Effect-native and require the exact peer.
 - Version authority: `config/effect-baseline.json`
 - Setup and guard: `scripts/prepare-effect-reference.mjs`, `scripts/verify-effect-reference.mjs`
 - Diagnostics: `scripts/run-effect-diagnostics.mjs`, `scripts/lib/effect-diagnostics.mjs`,
-  `config/effect-diagnostics-allowlist.json`
+  `scripts/lib/effect-diagnostics-policy.mjs`, `config/effect-diagnostics-allowlist.json`
 - Skill: `.agents/skills/effect-ts/SKILL.md` and `.agents/skills/effect-ts/references/`
-- Native contract: `scripts/lib/effect-version-contract.mjs`
+- Native contract: `scripts/lib/effect-version-contract.mjs`,
+  `scripts/lib/effect-native-contract.mjs`

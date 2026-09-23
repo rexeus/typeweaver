@@ -7,6 +7,7 @@ import {
   readLintConfig,
   workspaceRoot,
 } from "./lint-policy-contract.mjs";
+import { expectedIgnorePatterns } from "./lint-policy-rules.mjs";
 import { ruleCases } from "./maintainability-fixtures.mjs";
 
 /** @typedef {import("./tooling-types.mjs").PackageManifest} PackageManifest */
@@ -103,11 +104,51 @@ const repositoryFiles = () => {
     file => !deleted.has(file)
   );
 };
+/**
+ * Translates an Oxlint `ignorePatterns` glob into an anchored expression so
+ * the suppression scanner skips exactly the paths the linter ignores.
+ *
+ * @param {string} pattern
+ * @returns {RegExp}
+ */
+const ignorePatternExpression = pattern => {
+  const source = pattern
+    .split(/(\*\*\/|\*\*|\*)/u)
+    .map(part => {
+      if (part === "**/") return "(?:.*/)?";
+      if (part === "**") return ".*";
+      if (part === "*") return "[^/]*";
+      return part.replace(/[.+?^${}()|[\]\\]/gu, "\\$&");
+    })
+    .join("");
+  return new RegExp(`^${source}$`, "u");
+};
+const lintIgnoredPaths = expectedIgnorePatterns.map(ignorePatternExpression);
 /** @param {string} file @returns {boolean} */
 const isAuthoredLintSource = file =>
   /\.[cm]?[jt]sx?$/u.test(file) &&
-  !/(?:^|\/)(?:dist|node_modules|output|outputs)(?:\/|$)/u.test(file) &&
-  !file.startsWith(".vscode/");
+  !lintIgnoredPaths.some(expression => expression.test(file));
+/** @type {readonly (readonly [string, boolean])[]} */
+const scannerClassificationProbes = [
+  ["packages/gen/dist/index.js", false],
+  ["node_modules/pkg/index.js", false],
+  [".vscode/settings.ts", false],
+  ["packages/test-utils/src/test-project/output/lib/server/Router.ts", false],
+  ["packages/cli/test/outputs/all/index.ts", false],
+  ["packages/gen/src/output/writer.ts", true],
+  ["packages/cli/src/outputs/writer.ts", true],
+  ["packages/cli/test/nested/outputs/writer.ts", true],
+];
+/** @returns {void} */
+const assertScannerMatchesIgnorePatterns = () => {
+  const mismatches = scannerClassificationProbes.filter(
+    ([file, scanned]) => isAuthoredLintSource(file) !== scanned
+  );
+  if (mismatches.length > 0)
+    throw new Error(
+      `Suppression scanner disagrees with the lint ignorePatterns: ${JSON.stringify(mismatches)}`
+    );
+};
 /** @param {string} file @returns {ts.ScriptKind} */
 const scriptKindFor = file =>
   file.endsWith(".tsx")
@@ -153,6 +194,7 @@ const disableDirectives = file =>
 
 /** @param {readonly string[]} files @returns {void} */
 const assertDisableDirectives = files => {
+  assertScannerMatchesIgnorePatterns();
   const scannerInput = [
     'const literal = "// oxlint-disable no-console";',
     "// oxlint-disable-next-line no-console",

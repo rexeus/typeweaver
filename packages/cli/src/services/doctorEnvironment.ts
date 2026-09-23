@@ -2,27 +2,8 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { Effect } from "effect";
 import { createDoctorCheck } from "../reports/DoctorReport.js";
-import {
-  checkInput,
-  checkNodeVersion,
-  checkOutput,
-  checkPackageManager,
-  checkRuntime,
-} from "./doctorEnvironmentRuntime.js";
-import {
-  REQUIRED_EFFECT_VERSION,
-  checkWorkspaceEffectCompatibility,
-} from "./effectCompatibility.js";
+import { REQUIRED_EFFECT_VERSION } from "./effectCompatibility.js";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
-
-export {
-  checkInput,
-  checkNodeVersion,
-  checkOutput,
-  checkPackageManager,
-  checkRuntime,
-  checkWorkspaceEffectCompatibility,
-};
 
 const failureMessage = (failure: unknown): string =>
   failure instanceof Error ? failure.message : String(failure);

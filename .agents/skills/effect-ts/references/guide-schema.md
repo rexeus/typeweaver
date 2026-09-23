@@ -18,8 +18,8 @@ Key source files:
 Representative repo usage:
 
 - `./.repos/effect/packages/tools/ai-codegen/src/Config.ts`
-- `./.repos/effect/packages/platform-node/test/fixtures/rpc-schemas.ts`
-- `./.repos/effect/packages/platform-browser/test/IndexedDbQueryBuilder.test.ts`
+- `./.repos/effect/packages/platform/node/test/fixtures/rpc-schemas.ts`
+- `./.repos/effect/packages/platform/browser/test/IndexedDbQueryBuilder.test.ts`
 - `./.repos/effect/packages/tools/openapi-generator/`
 
 ## Mental Model
@@ -623,7 +623,7 @@ Patterns visible in the vendored repo:
 ## Good Repo Examples To Study
 
 - `./.repos/effect/packages/tools/ai-codegen/src/Config.ts`
-- `./.repos/effect/packages/platform-node/test/fixtures/rpc-schemas.ts`
-- `./.repos/effect/packages/platform-browser/test/IndexedDbQueryBuilder.test.ts`
+- `./.repos/effect/packages/platform/node/test/fixtures/rpc-schemas.ts`
+- `./.repos/effect/packages/platform/browser/test/IndexedDbQueryBuilder.test.ts`
 - `./.repos/effect/packages/tools/openapi-generator/src/JsonSchemaGenerator.ts`
 - `./.repos/effect/packages/effect/src/Schema.ts`

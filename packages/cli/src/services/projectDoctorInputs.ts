@@ -23,6 +23,11 @@ const resolveOptionalPath = (
       ? value
       : path.resolve(currentWorkingDirectory, value);
 
+/**
+ * Drops keys whose value is `undefined` so a merged configuration can be
+ * assigned under `exactOptionalPropertyTypes`, where an explicit `undefined`
+ * is not assignable to an optional property.
+ */
 const withoutUndefinedValues = (
   config: Record<string, unknown>
 ): Partial<TypeweaverConfig> => {

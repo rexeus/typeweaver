@@ -12,8 +12,12 @@ OpenAPI are Effect-native even when the artifacts they emit do not import Effect
 [ADR 0008: native Effect baseline](./adr/0008-effect-4-baseline.md).
 
 Native plugin code uses `Context.Service` and explicit `Layer` provisioning, `Result` rather than
-`Either`, and the RC.116 `Cause` and Schema APIs. Confirm signatures against the pinned source and
-run `pnpm verify:effect-reference` plus `pnpm effect:diagnostics` before publishing a plugin.
+`Either`, and the RC.116 `Cause` and Schema APIs. Before publishing a plugin, confirm uncertain
+signatures against the `effect@4.0.0-rc.116` source tag, run your package's typecheck and lifecycle
+tests (the scaffold's `pnpm check`), and optionally run the Effect language-service diagnostics from
+`@effect/tsgo` with `effect-tsgo diagnostics --project tsconfig.json`. The
+`pnpm verify:effect-reference` and `pnpm effect:diagnostics` scripts belong to the TypeWeaver
+repository and are only for contributors.
 
 If you are migrating a V1 plugin (built against `extends BasePlugin`), see the breaking-change
 section in [`MIGRATION.md`](../MIGRATION.md).
@@ -421,8 +425,16 @@ export const sessionPlugin = defineScopedPlugin({
 `initialize`, `collectResources`, `generate`, and `finalize`, and closes the retained Scope after
 success, typed failure, defect, or interruption. Failed or interrupted Layer construction closes its
 provisional Scope before the failure escapes. Concurrent generation fibers that share the same
-module-cached plugin instance retain independent Layers. The returned ordinary `Plugin` still
-exposes `R = never` at every lifecycle boundary.
+module-cached plugin instance retain independent Layers. The helper builds the Layer with a private
+memo map, so neither the Layer nor a Layer built inside it or inside a hook reuses an instance that
+an enclosing runtime already built; every generation acquires and releases its own resources. The
+returned ordinary `Plugin` still exposes `R = never` at every lifecycle boundary.
+
+The generator invokes every lifecycle hook of one generation on the same fiber, and the helper
+relies on that. If your own code calls the returned plugin's hooks, for example from a wrapper
+plugin, call them on one fiber and do not wrap an individual hook in `Effect.timeout`,
+`Effect.race`, or a fork. Forks inside your hook bodies are fine: they inherit the provided
+services.
 
 The helper owns **exit-independent resources**. `Plugin.finalize` does not receive the generator's
 original `Exit`, so do not use it for a transaction whose finalizer must choose commit versus

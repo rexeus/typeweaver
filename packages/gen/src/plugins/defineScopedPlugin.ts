@@ -17,10 +17,22 @@ type ScopedPluginRuntime<Services> = {
 };
 
 /**
- * Per-fiber runtime cell. Effect 4 removed `FiberRef`; the current fiber object
- * is a stable, unique key for the duration of one generation run, so a
- * `WeakMap` keyed by it preserves the per-fiber isolation the previous
- * `FiberRef` provided without leaking across runs.
+ * Runtime cell keyed by the fiber that invokes a lifecycle hook. Keying a
+ * `WeakMap` by the fiber object isolates concurrent generations that share one
+ * plugin instance and does not leak across runs.
+ *
+ * Unlike an Effect 3 `FiberRef`, the entry is not inherited by child fibers.
+ * The host must invoke `initialize`, `collectResources`, `generate`, and
+ * `finalize` on the same orchestrating fiber, as the generator and
+ * `createPluginTestKit` do. A hook that the host runs on a forked fiber, for
+ * example through `Effect.timeout` or `Effect.race`, finds no retained runtime
+ * and dies. Forks inside a hook body are unaffected because the retained
+ * services are provided through the inherited Context.
+ *
+ * RC.116 offers no public fiber-local cell that survives across separately
+ * invoked effects and is inherited by forks: a Context change made inside a
+ * hook is restored when an enclosing `Effect.provide` or `Effect.withSpan`
+ * exits.
  */
 type ScopedPluginRuntimeCell<Services> = {
   readonly get: Effect.Effect<ScopedPluginRuntime<Services> | undefined>;
@@ -120,10 +132,17 @@ const makeInitialize = <Services>(
         );
       }
 
+      // `Layer.buildWithScope` would fork the ambient memo map, so inside a
+      // runtime that already built this Layer value the generation would reuse
+      // that instance and never acquire or release its own. A private memo map
+      // (as `Effect.provide(layer, { local: true })` uses) also becomes the
+      // `CurrentMemoMap` of the build and of the retained services, so Layers
+      // built inside the plugin's Layer or hooks are not shared with the host.
+      const memoMap = yield* Layer.makeMemoMap;
       yield* Effect.acquireUseRelease(
         Scope.make(),
         scope =>
-          Layer.buildWithScope(definition.layer, scope).pipe(
+          Layer.buildWithMemoMap(definition.layer, memoMap, scope).pipe(
             Effect.tap(services => runtimeCell.set({ scope, services })),
             Effect.flatMap(services =>
               initializeHook === undefined
@@ -180,11 +199,15 @@ const makeFinalize = <Services>(
  * at `R = never`.
  *
  * The Layer is built exactly once by `initialize`, retained in a per-fiber
- * runtime cell for the current generation, and closed by `finalize`. Failed,
+ * runtime cell for the current generation, and closed by `finalize`. The build
+ * uses a private memo map, so neither the Layer nor a Layer built inside it or
+ * inside a hook reuses an instance that an enclosing runtime already built;
+ * every generation acquires and releases its own resources. Failed,
  * defective, or interrupted initialization closes its provisional Scope before
  * the failure escapes. Once initialization succeeds, the generator's
  * unconditional finalization boundary guarantees release after success, typed
- * failure, defect, or interruption in downstream lifecycle stages.
+ * failure, defect, or interruption in downstream lifecycle stages. Hosts must
+ * invoke every lifecycle hook on the same fiber.
  */
 export const defineScopedPlugin = <Services>(
   definition: ScopedPluginDefinition<Services>

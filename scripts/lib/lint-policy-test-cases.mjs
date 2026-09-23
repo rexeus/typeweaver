@@ -12,6 +12,8 @@ export const classValidFixture =
   'import { readFileSync } from "node:fs";\nexport const value: unknown = readFileSync;\n';
 export const classInvalidFixture =
   'import { readFileSync } from "fs";\nexport const value: unknown = readFileSync;\n';
+const describedExpectError =
+  '// @ts-expect-error a string literal is not a number\nexport const value: number = "text";\n';
 
 /** @type {{ name: string, rule: string, valid: string, invalid: string }[]} */
 export const cases = [
@@ -74,6 +76,24 @@ export const cases = [
     "typescript(switch-exhaustiveness-check)",
     'type Kind = "a" | "b"; export const describe = (kind: Kind): number => { switch (kind) { case "a": return 1; case "b": return 2; } };\n',
     'type Kind = "a" | "b"; export const describe = (kind: Kind): number => { switch (kind) { case "a": return 1; default: return 0; } };\n',
+  ],
+  [
+    "ban-ts-ignore",
+    "typescript(ban-ts-comment)",
+    describedExpectError,
+    '// @ts-ignore\nexport const value: number = "text";\n',
+  ],
+  [
+    "ban-ts-nocheck",
+    "typescript(ban-ts-comment)",
+    describedExpectError,
+    '// @ts-nocheck\nexport const value: number = "text";\n',
+  ],
+  [
+    "ban-undescribed-ts-expect-error",
+    "typescript(ban-ts-comment)",
+    describedExpectError,
+    '// @ts-expect-error\nexport const value: number = "text";\n',
   ],
   [
     "no-eval",
@@ -140,6 +160,18 @@ export const cases = [
     "unicorn(prefer-node-protocol)",
     classValidFixture,
     classInvalidFixture,
+  ],
+  [
+    "pure-barrel-imported-value-export",
+    "typeweaver(pure-barrel)",
+    'import { namedTarget } from "./importTarget.js";\nexport { namedTarget };\n',
+    'import { namedTarget } from "./importTarget.js";\nexport { namedTarget };\nexport const implementation = namedTarget + 1;\n',
+  ],
+  [
+    "pure-barrel-imported-type-export",
+    "typeweaver(pure-barrel)",
+    'import type { Target } from "./importTarget.js";\nexport type { Target };\n',
+    'import type { Target } from "./importTarget.js";\nexport type { Target };\nexport const implementation: Target = 1;\n',
   ],
 ].map(tuple => ({
   name: String(tuple[0]),

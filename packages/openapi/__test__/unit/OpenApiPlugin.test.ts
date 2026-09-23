@@ -14,7 +14,7 @@ import {
   anInlineResponseUsage,
   anOperationWith,
   aResponseWith,
-} from "./buildOpenApiDocument.helpers.js";
+} from "../helpers.js";
 import type {
   OpenApiPluginOptions,
   OpenApiServerObject,

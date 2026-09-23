@@ -117,6 +117,10 @@ const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
   const resourceEntries = Object.entries(definition.resources);
   if (resourceEntries.length === 0) throw new EmptySpecResourcesError();
   const contractRoot = normalizeContractRoot(definition);
+  // The core validator throws a plain Error (the core package stays free of
+  // an effect dependency — the same error fires from `defineSpec` in user
+  // authoring code). Wrap it here so the `NormalizationError` union stays a
+  // homogeneous set of tagged errors.
   try {
     validateUniqueResponseNames(definition.resources);
   } catch (error) {
@@ -167,6 +171,14 @@ const normalizeSpecSync = (definition: SpecDefinition): NormalizedSpec => {
     warnings,
   };
 };
+/**
+ * Normalize a SpecDefinition into the internal model used by every plugin.
+ *
+ * Internally a pure synchronous transform; exposed as an Effect so callers
+ * can compose with the rest of the pipeline, recover specific failures via
+ * `Effect.catchTag`, and stay type-aware of the closed set of normalization
+ * errors via the `NormalizationError` union.
+ */
 export const normalizeSpec = (
   definition: SpecDefinition
 ): Effect.Effect<NormalizedSpec, NormalizationError> =>
@@ -174,6 +186,8 @@ export const normalizeSpec = (
     try: () => normalizeSpecSync(definition),
     catch: error => {
       if (isNormalizationError(error)) return error;
+      // Anything else (programming bug, unexpected throw) propagates as a
+      // defect rather than getting falsely stamped as a NormalizationError.
       throw error;
     },
   });

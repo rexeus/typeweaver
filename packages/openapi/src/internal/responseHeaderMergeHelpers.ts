@@ -91,6 +91,16 @@ export function mergedHeaderDescription(
     ),
   ].join("\n");
 }
+/**
+ * Canonical, deterministic JSON serialization for header schemas. Used to
+ * deduplicate equivalent JSON schemas across response variants and (through
+ * the lexicographic key sort) to produce byte-identical output across hosts
+ * with different default locales — a Turkish locale, for example, sorts
+ * dotted-`i` and dotless-`ı` differently from the ASCII byte order that the
+ * golden-gate diff relies on.
+ *
+ * @internal Exposed for direct unit testing; not part of the public surface.
+ */
 export function stableStringifyJsonSchema(schema: JsonSchema): string {
   return JSON.stringify(canonicalizeJsonSchemaValue(schema));
 }

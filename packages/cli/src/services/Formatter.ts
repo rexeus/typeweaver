@@ -61,9 +61,14 @@ const makeFormatter = (
 };
 
 /**
- * Effect-native `oxfmt` facade. The missing optional `oxfmt` package is a
- * documented no-op; other load, formatting, and filesystem failures remain
- * typed errors.
+ * Effect-native `oxfmt` facade. The missing-tool warning routes through
+ * `Effect.logWarning` so it lands in the same logger pipeline as the rest
+ * of the run (ADR 0006). Directory walking and file reads/writes use the
+ * platform FileSystem service.
+ *
+ * A genuinely missing optional `oxfmt` package is a documented no-op.
+ * Package-load failures, formatter rejections, and filesystem failures remain
+ * in the typed `FormatterError` channel.
  */
 export class Formatter extends Context.Service<Formatter, FormatterShape>()(
   "typeweaver/Formatter"
@@ -85,7 +90,10 @@ export class Formatter extends Context.Service<Formatter, FormatterShape>()(
     Formatter.use(service => service.format(outputDir, startDir));
 }
 
-/** Test seam for deterministic module-load and formatter-failure scenarios. */
+/**
+ * Test seam for deterministic module-load and formatter-failure scenarios.
+ * Production uses `Formatter.Default`.
+ */
 export const formatterLayerWith = (
   loadModule: FormatterModuleLoader
 ): Layer.Layer<Formatter, never, FileSystem.FileSystem> =>

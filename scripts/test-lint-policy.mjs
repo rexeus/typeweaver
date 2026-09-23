@@ -6,6 +6,7 @@ import {
   assertConfigurationWeakeningDetection,
   assertLintPolicyProbes,
   writeDependencyFixtures,
+  writeOutputLookalikeFixtures,
   writeTestScopeFixtures,
   writeUnusedDisableFixture,
 } from "./lib/lint-policy-probes.mjs";
@@ -95,6 +96,7 @@ try {
     'import { partA } from "./no-cycle.part-a.js";\nexport const partB = partA;\n'
   );
   writeTestScopeFixtures(fixtureRoot);
+  writeOutputLookalikeFixtures(fixtureRoot);
   writeUnusedDisableFixture(fixtureRoot);
   const diagnostics = runRootLint();
   assertCases(cases, diagnostics, fixtureRoot, workspaceRoot);
@@ -105,5 +107,5 @@ try {
 }
 const weakeningChecks = assertConfigurationWeakeningDetection();
 process.stdout.write(
-  `Verified ${cases.length + 1} lint rules, test-scope and unused-disable enforcement, deny-warnings, and ${weakeningChecks} configuration-weakening rejections\n`
+  `Verified ${cases.length + 1} lint rule cases, test-scope, output-lookalike, and unused-disable enforcement, deny-warnings, and ${weakeningChecks} configuration-weakening rejections\n`
 );

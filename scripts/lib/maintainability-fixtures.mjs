@@ -64,14 +64,24 @@ export const functionLines = valueLines =>
   ].join("\n");
 
 /**
+ * Emits exactly `codeLines` counted lines surrounded by comment-only and blank
+ * lines that the file-size budget must skip.
+ *
  * @param {number} codeLines
  * @returns {string}
  */
 export const fileLines = codeLines =>
-  Array.from(
-    { length: codeLines },
-    (_, index) => `export const value${index} = ${index};`
-  ).join("\n");
+  [
+    "/**",
+    " * Comment-only lines must not count toward the file-size budget.",
+    " */",
+    "",
+    ...Array.from(
+      { length: codeLines },
+      (_, index) => `export const value${index} = ${index};`
+    ),
+    "// A trailing comment-only line must not count either.",
+  ].join("\n");
 
 /**
  * @param {number} depth
@@ -173,7 +183,7 @@ export const ruleCases = [
     name: "max-lines",
     rule: "eslint/max-lines",
     diagnostic: "eslint(max-lines)",
-    options: ["error", { max: 250, skipBlankLines: true, skipComments: false }],
+    options: ["error", { max: 250, skipBlankLines: true, skipComments: true }],
     valid: fileLines(250),
     invalid: fileLines(251),
   },

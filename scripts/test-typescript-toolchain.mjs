@@ -4,6 +4,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnPnpmSync } from "./lib/pnpm-command.mjs";
 import {
+  assertEveryTsconfigKeepsStrictness,
+  assertStrictnessWeakeningRejected,
+} from "./lib/typescript-config-strictness.mjs";
+import {
   assertStrictMatrix,
   checkJsInvalid,
   invalidProbe,
@@ -82,6 +86,7 @@ const assertAccepted = (result, label) =>
 const fixtureRoot = mkdtempSync(
   path.join(workspaceRoot, "scripts", ".typescript-toolchain-run-")
 );
+let checkedTsconfigCount = 0;
 try {
   writeFileSync(
     path.join(fixtureRoot, "package.json"),
@@ -196,9 +201,12 @@ try {
     ["node"],
     "checkjs profile must include node types"
   );
+  const strictnessCheck = { workspaceRoot, baseOptions, effectiveOptions };
+  checkedTsconfigCount = assertEveryTsconfigKeepsStrictness(strictnessCheck);
+  assertStrictnessWeakeningRejected(strictnessCheck);
 } finally {
   rmSync(fixtureRoot, { recursive: true, force: true });
 }
 process.stdout.write(
-  `Verified ${strictOptionMatrix.length} shared compiler options and ${invalidProbe.expected.length} diagnostics across ${Object.keys(profiles).length} profiles\n`
+  `Verified ${strictOptionMatrix.length} shared compiler options and ${invalidProbe.expected.length} diagnostics across ${Object.keys(profiles).length} profiles, and base strictness in ${checkedTsconfigCount} repository tsconfig files\n`
 );

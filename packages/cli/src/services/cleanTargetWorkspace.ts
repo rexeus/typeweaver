@@ -21,6 +21,8 @@ const hasWorkspacesField = (
     if (typeof parsed !== "object" || parsed === null) return false;
     return Boolean(Reflect.get(parsed, "workspaces"));
   } catch (error) {
+    // A malformed package.json does not make a directory a workspace root
+    // for the purposes of this guard. Treat parse failure as "no marker".
     if (error instanceof SyntaxError) return false;
     throw error;
   }

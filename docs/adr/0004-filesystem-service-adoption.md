@@ -83,9 +83,9 @@ Each sync leaf accepts an injectable filesystem shape: `PathSafetyFs`, `CleanTar
 implementation; tests pass an in-memory double.
 
 The service tag is imported from `effect`. A Node.js programmatic composition edge supplies the real
-implementation with `NodeFileSystem.layer` from `@effect/platform-node`; tests supply an in-memory
-implementation or `FileSystem.layerNoop` as appropriate. `MainLayer` stays platform-agnostic and
-does not provide a Node layer itself.
+implementation with `NodeFileSystem.layer` from `@effect/platform-node-shared`, as the CLI does;
+tests supply an in-memory implementation or `FileSystem.layerNoop` as appropriate. `MainLayer` stays
+platform-agnostic and does not provide a Node layer itself.
 
 ## Consequences
 

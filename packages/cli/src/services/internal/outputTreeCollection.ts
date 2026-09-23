@@ -43,6 +43,12 @@ const toRelativePath = (
     ? entryName
     : path.join(relativeDirectory, entryName);
 
+/**
+ * Inspects a tree root itself. Only `ENOENT` means "missing", and only when
+ * `allowMissingRoot` is set; an inaccessible root is a typed read failure. A
+ * symlinked root and a non-directory root are unsupported entries, never
+ * silently treated as empty.
+ */
 export const inspectRoot = (
   root: string,
   allowMissingRoot: boolean
@@ -89,6 +95,12 @@ const readEntryStats = (
   }
 };
 
+/**
+ * Only a directory whose exact complete marker or legacy lock metadata proves
+ * it is a Typeweaver coordination artifact is excluded. A regular file named
+ * `.typeweaver-lock`, a fence-shaped name, a bare marker filename, or a
+ * lookalike directory is compared or rejected normally.
+ */
 const isExcludedCoordinationDirectory = (
   root: string,
   absolutePath: string,

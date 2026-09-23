@@ -16,7 +16,7 @@ lines.
 ## Migrating from 0.12.x to 0.13.x
 
 Version 0.13.0 completes the migration to **Effect** as TypeWeaver's runtime foundation and matures
-the executable API contract. The release breaks eight surfaces:
+the executable API contract. The release breaks nine surfaces:
 
 1. The **plugin API** (V1 class-based → V2 Effect-native records). Affects anyone who built a custom
    plugin.
@@ -34,6 +34,8 @@ the executable API contract. The release breaks eight surfaces:
    profiles, with API identity sourced from the spec.
 8. **Generation locking** moves to a system-temporary coordination namespace; mixed CLI versions
    must not generate concurrently.
+9. **Optional HTTP header/query values and normalized properties** admit explicit `undefined`, so
+   code that reads them must handle that case.
 
 ### 1. Plugin API V1 → V2 (BREAKING — third-party plugin authors)
 
@@ -203,9 +205,25 @@ import Effect.
 Install the exact peer, remove Effect 3 packages and ranges, then update visible APIs: replace
 Effect 3 service builders with `Context.Service` plus explicit layers, `Either` with `Result`, old
 Cause helpers with RC.116 reason accessors, `Schema.decodeUnknown` with
-`Schema.decodeUnknownEffect`, and legacy CLI imports with `effect/unstable/cli`. Re-run the
-standalone `@effect/tsgo` diagnostics gate and `pnpm verify:effect-reference` against commit
-`d62dd0d65252e5d3635538f0e41adc7c08aa9beb`. See [ADR 0008](./docs/adr/0008-effect-4-baseline.md).
+`Schema.decodeUnknownEffect`, and legacy CLI imports with `effect/unstable/cli`.
+
+Plugin file failures changed shape. `writeFileEffect` and `renderTemplateEffect` now fail with the
+single Effect 4 `PlatformError` from `effect/PlatformError` instead of the Effect 3
+`@effect/platform/Error` union of `SystemError` and `BadArgument`. Replace
+`Effect.catchTag("SystemError", ...)` and `Effect.catchTag("BadArgument", ...)` with
+`Effect.catchTag("PlatformError", ...)` and branch on `error.reason._tag`: `"BadArgument"` for a
+rejected argument, or a system tag such as `"NotFound"`, `"PermissionDenied"`, or `"AlreadyExists"`
+that Effect 3 exposed as the `SystemError` `reason` string. The TypeWeaver tags
+`UnsafeGeneratedPathError`, `GeneratedPathProbeError`, and `TemplateRenderError` are unchanged.
+
+To check your own project after upgrading, confirm that it resolves exactly one
+`effect@4.0.0-rc.116` copy (for example with `pnpm why effect`) and run `typeweaver doctor`, which
+reports the project's Effect declaration as `TW-DOCTOR-011`. For Effect language-service diagnostics
+in your plugin or application, install `@effect/tsgo` and run
+`effect-tsgo diagnostics --project tsconfig.json`. Confirm uncertain signatures against the
+`effect@4.0.0-rc.116` source tag (commit `d62dd0d65252e5d3635538f0e41adc7c08aa9beb`). Contributors
+to this repository additionally run `pnpm verify:effect-reference` and `pnpm effect:diagnostics`.
+See [ADR 0008](./docs/adr/0008-effect-4-baseline.md).
 
 ### 3. Internal API changes (informational; only programmatic consumers)
 
@@ -240,7 +258,9 @@ CLI. See `packages/cli/src/effectRuntime.ts` and
   - `MainLayer` (from `@rexeus/typeweaver-gen`) now requires Effect 4's platform-agnostic
     `FileSystem` service from `effect` — `ContextBuilder` captures it for the Effect-native plugin
     context surface. At a Node.js programmatic edge, provide `NodeFileSystem.layer` from
-    `@effect/platform-node`; tests can provide an in-memory or no-op `FileSystem` layer beneath it.
+    `@effect/platform-node-shared` (the TypeWeaver CLI uses this package; `@effect/platform-node`
+    re-exports the same layer but also requires a `redis` peer); tests can provide an in-memory or
+    no-op `FileSystem` layer beneath it.
 - Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
   branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
 - Fiber interruption waits for a running Rolldown bundle to settle before the generator releases its
@@ -510,7 +530,7 @@ What this means for upgrades:
   `SystemDrive`, and relies on the installed system temp directory's inherited ACLs. A missing,
   non-directory, or unwritable root fails closed with an actionable error.
 
-### 9. Optional HTTP values and normalized properties admit explicit `undefined`
+### 9. Optional HTTP values and normalized properties admit explicit `undefined` (BREAKING for code that reads them)
 
 TypeWeaver's compiler profiles now enable `exactOptionalPropertyTypes`, and the public types were
 aligned with how schemas actually model optional values. Optional HTTP header/query map values and
@@ -523,10 +543,24 @@ optional normalized model properties now include `undefined` in their value type
   `T | undefined` (for example `NormalizedOperation["description"]` and
   `NormalizedOperation["request"]`).
 
-The change is additive: existing valid assignments keep working. Consumers that enable
-`exactOptionalPropertyTypes` no longer need to widen or omit these properties themselves, and
-consumers that index header/query maps should handle the `undefined` value; the server middleware
-already skips undefined entries when reading or copying headers.
+Code that writes these values keeps compiling: every assignment that was valid before is still
+valid, and consumers that enable `exactOptionalPropertyTypes` no longer need to widen or omit these
+properties themselves. Code that reads them does not always keep compiling, with or without
+`exactOptionalPropertyTypes`: indexing a header or query map now yields
+`string | string[] | undefined` instead of `string | string[]`, so assigning
+`response.header["content-type"]` to a `string | string[]` variable is a type error until the
+`undefined` case is handled. The server middleware already skips undefined entries when reading or
+copying headers.
+
+The Fetch-native server erases handler types without `any`:
+
+- `TypeweaverRouter` and `RouteDefinition.handler` are constrained by the exported
+  `ErasedRequestHandler` instead of `RequestHandler<any, any, any>`.
+- `nodeAdapter` accepts `TypeweaverApp<Record<string, unknown>>` instead of `TypeweaverApp<any>`.
+
+Generated routers and apps are unaffected. A hand-written handler registered through a custom
+router's `route(...)` receives `IRawHttpRequest | IValidatedHttpRequest`; annotate its parameter
+with the request type it validates, or narrow it before reading typed fields.
 
 ### 10. Migration Checklist (0.12.x to 0.13.x)
 
@@ -556,6 +590,8 @@ For **end users** (you use the CLI but don't author plugins):
       support that profile; otherwise use the 3.1.2 default.
 - [ ] Handle present-but-`undefined` entries when indexing `IHttpHeader` or `IHttpQuery` values, and
       the widened optional fields on `NormalizedSpec` types.
+- [ ] Annotate or narrow the request parameter of hand-written handlers registered through a custom
+      router's `route(...)`.
 
 For **plugin authors**:
 

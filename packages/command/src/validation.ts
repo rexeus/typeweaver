@@ -1,6 +1,6 @@
 import type { Issue, NormalizedSpec } from "@rexeus/typeweaver-gen";
 import { buildCommandOperationModels } from "./model.js";
-import type { CommandOperationModel } from "./model.js";
+import type { CommandOperationModel } from "./modelTypes.js";
 
 const RESERVED_COMMAND_NAMES = new Set(["help"]);
 

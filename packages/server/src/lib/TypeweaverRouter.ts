@@ -15,7 +15,7 @@ import type {
   RouterErrorConfig,
   UnknownErrorHandler,
   RequestValidationErrorHandler,
-} from "./Router.js";
+} from "./routerTypes.js";
 
 /**
  * Makes `validateRequests` mandatory when the router cannot statically

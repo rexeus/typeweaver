@@ -11,7 +11,7 @@ export const writeClassifiedProbeFixtures = roots => {
     [roots.fixtureRoot, "boundary-valid.tst.ts", "boundary-invalid.tst.ts"],
   ];
   for (const [directory, validName, invalidName] of classifiedRoots) {
-    writeFileSync(path.join(directory, validName), `${fileLines(349)}\n`);
-    writeFileSync(path.join(directory, invalidName), `${fileLines(350)}\n`);
+    writeFileSync(path.join(directory, validName), `${fileLines(350)}\n`);
+    writeFileSync(path.join(directory, invalidName), `${fileLines(351)}\n`);
   }
 };

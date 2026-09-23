@@ -1,6 +1,6 @@
 import type { JsonSchema } from "@rexeus/typeweaver-zod-to-json-schema";
 import { describe, expect, test } from "vitest";
-import { stableStringifyJsonSchema } from "../../src/internal/responseHeaderMerge.js";
+import { stableStringifyJsonSchema } from "../../src/internal/responseHeaderMergeHelpers.js";
 
 describe("stableStringifyJsonSchema (canonical key sort)", () => {
   test("sorts ASCII-cased keys by byte order, not Turkish locale order", () => {

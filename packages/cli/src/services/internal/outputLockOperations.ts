@@ -62,6 +62,7 @@ const writeLockInfo = (lockDir: string, info: OutputLockInfo): void => {
   try {
     fs.writeFileSync(candidatePath, JSON.stringify(info, null, 2), {
       flag: "wx",
+      // Owner-only metadata; the lock directory is already 0o700.
       mode: 0o600,
     });
     fs.renameSync(candidatePath, path.join(lockDir, OUTPUT_LOCK_INFO_FILE));
@@ -72,6 +73,8 @@ const writeLockInfo = (lockDir: string, info: OutputLockInfo): void => {
 
 const tryCreateLockDir = (lockDir: string): boolean => {
   try {
+    // Explicit private mode so a permissive umask cannot expose lock metadata
+    // to other users on the shared trusted temp root.
     fs.mkdirSync(lockDir, { mode: 0o700 });
     return true;
   } catch (error) {
@@ -116,6 +119,8 @@ const tryAcquireNewOutputLock = (
   params: { readonly outputDir: string; readonly inputFile: string },
   hooks: OutputLockAcquisitionHooks
 ): OutputLock | undefined => {
+  // The lock is a flat entry directly under the trusted system temp root, so
+  // no CLI user owns a shared parent that could rename another user's lock.
   ensureTrustedHostTempDirectory(canonicalHostTempDirectory());
   const lockDir = outputLockDirectory(params.outputDir);
   if (!tryCreateLockDir(lockDir)) return undefined;

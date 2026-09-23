@@ -99,17 +99,33 @@ const matchesPolicyPath = (file, pathPart) =>
       ? file.startsWith(pathPart)
       : file === pathPart;
 
-/** @param {string} file @param {string} rule @returns {boolean} */
-const isAllowedWarning = (file, rule) =>
-  EFFECT_DIAGNOSTIC_POLICY.warningExemptions.some(
+/**
+ * Returns the first policy category that exempts `rule` at the workspace-
+ * relative `file`. Paths starting with `/` match anywhere in the path, paths
+ * ending with `/` match a whole directory prefix, and other paths match one
+ * exact file.
+ * @param {string} file @param {string} rule @returns {string | undefined}
+ */
+export const exemptionCategoryFor = (file, rule) =>
+  EFFECT_DIAGNOSTIC_POLICY.warningExemptions.find(
     policy =>
       policy.rules.includes(rule) &&
       policy.paths.some(pathPart => matchesPolicyPath(file, pathPart))
-  );
+  )?.category;
+
+/**
+ * Returns the exemption category of a non-error diagnostic, or `undefined`
+ * when the diagnostic blocks the gate.
+ * @param {import("./effect-diagnostics.mjs").EffectDiagnostic} diagnostic @returns {string | undefined}
+ */
+export const effectDiagnosticExemption = diagnostic =>
+  diagnostic.severity === "error"
+    ? undefined
+    : exemptionCategoryFor(
+        toWorkspacePath(path.resolve(diagnostic.file)),
+        diagnostic.name
+      );
 
 /** @param {import("./effect-diagnostics.mjs").EffectDiagnostic} diagnostic @returns {boolean} */
-export const isBlockingEffectDiagnostic = diagnostic => {
-  if (diagnostic.severity === "error") return true;
-  const relativeFile = toWorkspacePath(path.resolve(diagnostic.file));
-  return !isAllowedWarning(relativeFile, diagnostic.name);
-};
+export const isBlockingEffectDiagnostic = diagnostic =>
+  effectDiagnosticExemption(diagnostic) === undefined;

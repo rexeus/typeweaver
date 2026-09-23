@@ -2,13 +2,7 @@ import {
   mergeBodySchemas,
   mergeHeaderSchemas,
 } from "./responseDefinitionMerge.js";
-import {
-  attachResponseDefinitionMetadata,
-  getResponseDefinitionMetadata,
-  isNamedResponseDefinition,
-  ResponseDefinitionMergeError,
-} from "./responseDefinitionMetadata.js";
-import { responseDefinitionMetadataSymbol } from "./responseDefinitionTypes.js";
+import { attachResponseDefinitionMetadata } from "./responseDefinitionMetadata.js";
 import type { HttpBodySchema } from "./HttpBody.js";
 import type { HttpHeaderSchema } from "./HttpHeader.js";
 import type { HttpStatusCode } from "./HttpStatusCode.js";
@@ -21,22 +15,7 @@ import type {
   DerivedResponseOverrides,
   DefineResponseInput,
   ResponseDefinition,
-  ResponseDefinitionMetadata,
 } from "./responseDefinitionTypes.js";
-
-export type {
-  DerivedResponseMetadata,
-  DerivedResponseOverrides,
-  DefineResponseInput,
-  ResponseDefinition,
-  ResponseDefinitionMetadata,
-};
-export {
-  ResponseDefinitionMergeError,
-  getResponseDefinitionMetadata,
-  isNamedResponseDefinition,
-};
-export { responseDefinitionMetadataSymbol };
 
 type ResponseLineage<
   TResponse extends ResponseDefinition,

@@ -78,6 +78,11 @@ const skippedDeepCheck = (message: string) =>
     message,
   });
 
+// Deep validation runs configured plugin `validate` Effects, so it is gated on
+// every prerequisite including workspace Effect compatibility. An Effect-native
+// or custom plugin in an unsupported workspace must never reach a plugin
+// validation Effect; the compatibility check fails first and this skip keeps the
+// two checks consistent.
 export const checkDeepValidation = (
   projectValidator: ProjectValidatorShape,
   params: DeepValidationParams

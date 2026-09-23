@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   NATIVE_EFFECT_DOCUMENT_TOKENS,
-  validateEffectPackageVersions,
   validateNativeEffectWorkspaceContract,
-} from "./lib/effect-version-contract.mjs";
+} from "./lib/effect-native-contract.mjs";
+import { validateEffectPackageVersions } from "./lib/effect-version-contract.mjs";
 
 const runtimeVersion = "4.0.0-rc.116";
 const fixtureRoot = mkdtempSync(
@@ -183,6 +183,12 @@ const mutations = [
       });
     },
     "Effect-optional",
+  ],
+  [
+    () => {
+      documents["packages/effect/README.md"] = "4.0.0-rc.116\nCause\n";
+    },
+    "packages/effect/README.md is missing native Effect statement: ManagedRuntime",
   ],
 ];
 for (const [mutate, expected] of mutations) {

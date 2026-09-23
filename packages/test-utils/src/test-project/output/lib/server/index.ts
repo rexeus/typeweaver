@@ -18,7 +18,7 @@ export type {
   ResponseValidationErrorHandler,
   RouteMetadata,
   UnknownErrorHandler,
-} from "./Router.js";
+} from "./routerTypes.js";
 export type { ServerContext } from "./ServerContext.js";
 export type { ErasedRequestHandler, RequestHandler } from "./RequestHandler.js";
 export { StateMap } from "./StateMap.js";

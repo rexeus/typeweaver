@@ -1,5 +1,11 @@
-import type { TypeweaverConfig } from "@rexeus/typeweaver-gen";
+import type {
+  PluginRegistryShape,
+  TypeweaverConfig,
+} from "@rexeus/typeweaver-gen";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
+import type { ConfigLoaderShape } from "./ConfigLoader.js";
+import type { PluginLoaderShape } from "./PluginLoaderService.js";
+import type { ProjectValidatorShape } from "./ProjectValidator.js";
 
 export type DiagnoseProjectParams = {
   readonly currentWorkingDirectory: string;
@@ -27,4 +33,11 @@ export type DeepValidationParams = {
   readonly prerequisiteChecks: readonly DoctorCheck[];
   readonly deep: boolean;
   readonly currentWorkingDirectory: string;
+};
+
+export type ProjectDoctorServices = {
+  readonly configLoader: ConfigLoaderShape;
+  readonly pluginLoader: PluginLoaderShape;
+  readonly pluginRegistry: PluginRegistryShape;
+  readonly projectValidator: ProjectValidatorShape;
 };

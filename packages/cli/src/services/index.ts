@@ -15,7 +15,7 @@ export { GeneratedOutputChecker } from "./GeneratedOutputChecker.js";
 export type { GenerateFailure, GenerateParams } from "./generatorTypes.js";
 export { IndexFileGenerator } from "./IndexFileGenerator.js";
 export { PluginLoader } from "./PluginLoaderService.js";
-export type { PluginResolutionStrategy } from "./PluginLoader.js";
+export type { PluginResolutionStrategy } from "./pluginResolution.js";
 export { PluginModuleLoader } from "./PluginModuleLoader.js";
 export { PluginModuleNotFoundError } from "./errors/PluginModuleNotFoundError.js";
 export { PluginScaffolder } from "./PluginScaffolder.js";
@@ -29,7 +29,7 @@ export type {
   ValidateProjectResult,
 } from "./ProjectValidator.js";
 export { ProjectDoctor } from "./ProjectDoctor.js";
-export type { DiagnoseProjectParams } from "./ProjectDoctor.js";
+export type { DiagnoseProjectParams } from "./projectDoctorTypes.js";
 export { ProjectInitializer } from "./ProjectInitializer.js";
 export type {
   InitConfigFormat,
@@ -37,7 +37,7 @@ export type {
   InitializeProjectResult,
 } from "./ProjectInitializer.js";
 export { SpecBundler } from "./SpecBundler.js";
-export type { SpecBundlerConfig, SpecBundlerDeps } from "./SpecBundler.js";
+export type { SpecBundlerConfig, SpecBundlerDeps } from "./specBundlerTypes.js";
 export { SpecImporter } from "./SpecImporter.js";
 export { SpecLoader } from "./SpecLoader.js";
 export type { LoadedSpec, SpecLoaderConfig } from "./SpecLoader.js";

@@ -21,18 +21,7 @@ import type {
   PluginContextBuilderDeps,
   PluginContextParams,
 } from "./pluginContextBuilderTypes.js";
-import type {
-  GeneratedFilesTracker,
-  SyncAtomicFileSystem,
-} from "./pluginContextFileWriter.js";
-
-export type {
-  GeneratorContextDeps,
-  GeneratorContextParams,
-  PluginContextParams,
-};
-export type { SyncAtomicFileSystem };
-export { liveSyncAtomicFileSystem };
+import type { GeneratedFilesTracker } from "./pluginContextFileWriter.js";
 
 export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: PluginContextParams) => PluginContext;
@@ -170,8 +159,12 @@ const createGeneratorContext = (
  * Effect-native `PathSafety` and `TemplateRenderer` services, with no
  * `Effect.runSync` bridging in between.
  *
- * Directory creation and template reads remain direct `node:fs` calls because
- * the plugin-author API is sync end-to-end (ADR 0003/0004).
+ * The sync atomic-replace operations are captured behind
+ * `SyncAtomicFileSystem`; production delegates that narrow port to `node:fs`,
+ * while tests can inject deterministic rename/cleanup failures. Directory
+ * creation and template reads remain direct `node:fs` calls because the
+ * plugin-author API is sync end-to-end (ADR 0003/0004). Every write remains
+ * gated by `pathSafety.validateGeneratedPath`.
  */
 export function createPluginContextBuilder(
   deps: PluginContextBuilderDeps

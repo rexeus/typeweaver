@@ -31,19 +31,19 @@ const writeCoreProbeFixtures = fixtureRoot => {
   mkdirSync(testRoot, { recursive: true });
   writeFileSync(
     path.join(fixtureRoot, "source-max-lines.valid.ts"),
-    `${fileLines(249)}\n`
-  );
-  writeFileSync(
-    path.join(fixtureRoot, "source-max-lines.invalid.ts"),
     `${fileLines(250)}\n`
   );
   writeFileSync(
+    path.join(fixtureRoot, "source-max-lines.invalid.ts"),
+    `${fileLines(251)}\n`
+  );
+  writeFileSync(
     path.join(testRoot, "test-max-lines.valid.ts"),
-    `${fileLines(349)}\n`
+    `${fileLines(350)}\n`
   );
   writeFileSync(
     path.join(testRoot, "test-max-lines.invalid.ts"),
-    `${fileLines(350)}\n`
+    `${fileLines(351)}\n`
   );
   writeFileSync(
     path.join(fixtureRoot, "cognitive-complexity.valid.ts"),
@@ -122,22 +122,22 @@ const probeDefinitions = [
   {
     relativePath: "source-max-lines.valid.ts",
     rule: undefined,
-    label: "source max-lines 250",
+    label: "source max-lines 250 code lines plus skipped comments",
   },
   {
     relativePath: "source-max-lines.invalid.ts",
     rule: "eslint(max-lines)",
-    label: "source max-lines 251 including a comment",
+    label: "source max-lines 251 code lines",
   },
   {
     relativePath: "__test__/test-max-lines.valid.ts",
     rule: undefined,
-    label: "test max-lines 350",
+    label: "test max-lines 350 code lines plus skipped comments",
   },
   {
     relativePath: "__test__/test-max-lines.invalid.ts",
     rule: "eslint(max-lines)",
-    label: "test max-lines 351 including a comment",
+    label: "test max-lines 351 code lines",
   },
   {
     relativePath: "cognitive-complexity.valid.ts",
@@ -196,12 +196,12 @@ const assertClassifiedProbes = (diagnostics, roots) => {
   for (const { directory, validName, invalidName, label } of classifiedRoots) {
     assertProbe(diagnostics, {
       path: path.join(directory, validName),
-      label: `${label} max-lines 350`,
+      label: `${label} max-lines 350 code lines plus skipped comments`,
     });
     assertProbe(diagnostics, {
       path: path.join(directory, invalidName),
       rule: "eslint(max-lines)",
-      label: `${label} max-lines 351`,
+      label: `${label} max-lines 351 code lines`,
     });
   }
 };

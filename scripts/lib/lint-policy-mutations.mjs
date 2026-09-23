@@ -2,7 +2,7 @@ import {
   expectedTestFiles,
   expectedTypedTestFiles,
   expectedTypeScriptFiles,
-} from "./lint-policy-contract.mjs";
+} from "./lint-policy-rules.mjs";
 
 /** @typedef {import("./lint-policy-contract.mjs").LintConfig} LintConfig */
 
@@ -42,7 +42,7 @@ export const mutationCases = [
     mutate: config => {
       config.rules["eslint/max-lines"] = [
         "error",
-        { max: 251, skipBlankLines: true, skipComments: false },
+        { max: 251, skipBlankLines: true, skipComments: true },
       ];
     },
   },
@@ -56,12 +56,9 @@ export const mutationCases = [
     },
   },
   {
-    label: "root comments excluded from structural threshold",
+    label: "root structural threshold disabled",
     mutate: config => {
-      config.rules["eslint/max-lines"] = [
-        "error",
-        { max: 250, skipBlankLines: true, skipComments: true },
-      ];
+      config.rules["eslint/max-lines"] = "off";
     },
   },
   {
@@ -75,15 +72,15 @@ export const mutationCases = [
     mutate: config => {
       overrideFor(config, expectedTestFiles).rules["eslint/max-lines"] = [
         "error",
-        { max: 351, skipBlankLines: true, skipComments: false },
+        { max: 351, skipBlankLines: true, skipComments: true },
       ];
     },
   },
   {
-    label: "test comments excluded from structural threshold",
+    label: "test structural threshold downgraded",
     mutate: config => {
       overrideFor(config, expectedTestFiles).rules["eslint/max-lines"] = [
-        "error",
+        "warn",
         { max: 350, skipBlankLines: true, skipComments: true },
       ];
     },
@@ -133,8 +130,48 @@ export const mutationCases = [
     label: "generated output no longer excluded",
     mutate: config => {
       config.ignorePatterns = config.ignorePatterns.filter(
-        pattern => pattern !== "**/output/**"
+        pattern => pattern !== "packages/test-utils/src/test-project/output/**"
       );
+    },
+  },
+  {
+    label: "unanchored output directory exclusion reintroduced",
+    mutate: config => {
+      config.ignorePatterns.push("**/output/**");
+    },
+  },
+  {
+    label: "ts-ignore allowed in TypeScript source",
+    mutate: config => {
+      overrideFor(config, expectedTypeScriptFiles).rules[
+        "typescript/ban-ts-comment"
+      ] = [
+        "error",
+        {
+          "ts-expect-error": "allow-with-description",
+          "ts-ignore": false,
+          "ts-nocheck": true,
+          "ts-check": false,
+          minimumDescriptionLength: 3,
+        },
+      ];
+    },
+  },
+  {
+    label: "undescribed ts-expect-error allowed in tests",
+    mutate: config => {
+      overrideFor(config, expectedTypedTestFiles).rules[
+        "typescript/ban-ts-comment"
+      ] = [
+        "error",
+        {
+          "ts-expect-error": false,
+          "ts-ignore": true,
+          "ts-nocheck": true,
+          "ts-check": false,
+          minimumDescriptionLength: 3,
+        },
+      ];
     },
   },
   {

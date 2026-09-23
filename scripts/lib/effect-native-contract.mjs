@@ -25,7 +25,7 @@ export const NATIVE_EFFECT_DOCUMENT_TOKENS = {
   "docs/getting-started.md": ["4.0.0-rc.116", "native", "optional"],
   "packages/cli/README.md": ["4.0.0-rc.116", "programmatic", "optional"],
   "packages/gen/README.md": ["4.0.0-rc.116", "Context.Service", "Result"],
-  "packages/effect/README.md": ["4.0.0-rc.116", "Context.Service", "Cause"],
+  "packages/effect/README.md": ["4.0.0-rc.116", "ManagedRuntime", "Cause"],
   "docs/plugin-authoring.md": ["4.0.0-rc.116", "Context.Service", "Result"],
   "MIGRATION.md": ["4.0.0-rc.116", "Context.Service", "Result", "Cause"],
 };

@@ -20,6 +20,19 @@ export * from "./UnknownResponse.js";
 export * from "./ReservedPathParameter.js";
 export * from "./defineOperation.js";
 export * from "./defineResponse.js";
+export {
+  getResponseDefinitionMetadata,
+  isNamedResponseDefinition,
+  ResponseDefinitionMergeError,
+} from "./responseDefinitionMetadata.js";
+export { responseDefinitionMetadataSymbol } from "./responseDefinitionTypes.js";
+export type {
+  DefineResponseInput,
+  DerivedResponseMetadata,
+  DerivedResponseOverrides,
+  ResponseDefinition,
+  ResponseDefinitionMetadata,
+} from "./responseDefinitionTypes.js";
 export * from "./defineSpec.js";
 export * from "./defaultError.js";
 export * from "./validateResponseUniqueness.js";

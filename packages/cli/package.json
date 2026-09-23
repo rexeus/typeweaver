@@ -44,9 +44,9 @@
     "test:bundle:deno": "pnpm run build && deno run -A --sloppy-imports dist/entry.mjs generate --output test/outputs/bundle-deno --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:bun": "pnpm run build && bun run dist/entry.mjs generate --output test/outputs/bundle-bun --input ../test-utils/src/test-project/spec/index.ts --plugins clients,aws-cdk,hono",
     "test:bundle:all": "pnpm run test:bundle && pnpm run test:bundle:deno && pnpm run test:bundle:bun",
-    "test:process": "pnpm run build && vitest --run --no-file-parallelism __test__/cli.process.test.ts __test__/pluginAuthoring.serviceFixture.test.ts __test__/pluginScaffold.process.test.ts __test__/validate.process.test.ts __test__/doctor.process.test.ts __test__/init.process.test.ts __test__/projectInitializer.rollback.test.ts __test__/generateCheck.process.test.ts",
+    "test:process": "pnpm run build && vitest --run --no-file-parallelism __test__/cli.process/ __test__/pluginAuthoring/ __test__/pluginScaffold.process.test.ts __test__/validate.process/ __test__/doctor.process/ __test__/init.process.test.ts __test__/projectInitializer.rollback.test.ts __test__/generateCheck.process/",
     "test": "vitest --run",
-    "test:windows-security": "vitest run --no-file-parallelism __test__/generator.test.ts __test__/generator.unsafeTarget.test.ts __test__/generator.lockfile.test.ts __test__/generator.lifecycle-ordering.test.ts __test__/generator.orphanTempdirs.test.ts __test__/generator.recovery.test.ts __test__/pluginAuthoring.scopedServiceRecovery.test.ts __test__/pluginAuthoring.serviceFixture.test.ts __test__/services/internal/generatorPreflight.test.ts __test__/services/internal/hostTemp.test.ts __test__/services/internal/projectStaging.test.ts __test__/services/internal/stagingAuthority.test.ts __test__/services/internal/outputCoordinationArtifact.test.ts __test__/services/generatorIO.legacyCleanup.test.ts __test__/services/outputComparison.test.ts __test__/services/SpecBundler.specifier.test.ts __test__/generatedOutputChecker.test.ts __test__/services/FileSystem.contract.test.ts __test__/specLoader.test.ts __test__/cli.process.test.ts __test__/validate.process.test.ts __test__/generateCheck.process.test.ts",
+    "test:windows-security": "vitest run --no-file-parallelism __test__/generator/cleanTarget/ __test__/generator/unsafeTarget/ __test__/generator/outputLock/ __test__/generator/pluginLifecycle/ __test__/generator/recovery/ __test__/pluginAuthoring/ __test__/services/internal/generatorPreflight/ __test__/services/internal/hostTemp.test.ts __test__/services/internal/projectStaging.test.ts __test__/services/internal/stagingAuthority.test.ts __test__/services/internal/outputCoordinationArtifact.test.ts __test__/services/generatorIO.legacyCleanup.test.ts __test__/services/outputComparison/ __test__/services/SpecBundler.specifier.test.ts __test__/generatedOutputChecker/ __test__/services/FileSystem.contract.test.ts __test__/specLoader/ __test__/cli.process/ __test__/validate.process/ __test__/generateCheck.process/",
     "test:gen": "pnpm run test:gen:types && pnpm run test:gen:clients && pnpm run test:gen:command && pnpm run test:gen:effect && pnpm run test:gen:aws-cdk && pnpm run test:gen:hono && pnpm run test:gen:all",
     "test:gen:types": "tsx src/cli.ts generate --output test/outputs/types --input ../test-utils/src/test-project/spec/index.ts",
     "test:gen:clients": "tsx src/cli.ts generate --output test/outputs/clients --input ../test-utils/src/test-project/spec/index.ts --plugins clients",
@@ -77,7 +77,6 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "dependencies": {
-    "@effect/platform-node": "4.0.0-rc.116",
     "@effect/platform-node-shared": "4.0.0-rc.116",
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",
@@ -93,7 +92,6 @@
     "effect": "4.0.0-rc.116",
     "oxc-transform": "^0.141.0",
     "rolldown": "^1.2.0",
-    "redis": "^5.0.0",
     "semver": "7.7.4",
     "zod": "^4.4.3"
   },

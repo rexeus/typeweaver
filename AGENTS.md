@@ -18,8 +18,8 @@ notes, but it is gitignored and never part of the published repository.
   [`packages/tsconfig/README.md`](./packages/tsconfig/README.md).
 - Oxlint enforces lint, type-aware semantic safety, and maintainability rules. `pnpm lint` is
   warning-free and requires `exactOptionalPropertyTypes`-clean code. Authored source has a 250-line
-  file budget; classified tests have a 350-line file budget. Both count comments and skip blank
-  lines.
+  file budget; classified tests have a 350-line file budget. Both count code lines only and skip
+  comment-only and blank lines, so never delete a rationale comment to fit the budget.
 - Oxfmt formats source and documentation.
 - Vitest runs unit, integration, and generation tests.
 
@@ -44,6 +44,8 @@ decision. Install with `pnpm install --frozen-lockfile`.
 | `@rexeus/typeweaver-server`             | Generated Fetch-native routers, handlers, app, and middleware                |
 | `@rexeus/typeweaver-hono`               | Generated Hono routers and handlers                                          |
 | `@rexeus/typeweaver-aws-cdk`            | Generated AWS CDK API Gateway helpers                                        |
+| `@rexeus/typeweaver-command`            | Generated command-line API client                                            |
+| `@rexeus/typeweaver-effect`             | Generated optional Effect-native adapters for Fetch server handlers          |
 | `@rexeus/typeweaver-openapi`            | OpenAPI document builder and generator plugin                                |
 | `@rexeus/typeweaver-zod-to-ts`          | Zod-to-TypeScript conversion                                                 |
 | `@rexeus/typeweaver-zod-to-json-schema` | Zod-to-JSON-Schema conversion                                                |
@@ -58,21 +60,30 @@ decision. Install with `pnpm install --frozen-lockfile`.
 - Establish a failing test or characterization before changing behavior. Run the narrow package
   check after each logical change, then the required repository gate.
 - Prefer `unknown` plus explicit validation at external boundaries. Do not introduce `any`, unsafe
-  assertions, ignored type errors, skipped tests, or muted lint rules to pass a gate.
+  assertions, ignored type errors, skipped tests, or muted lint rules to pass a gate. Lint rejects
+  `@ts-ignore` and `@ts-nocheck`; a type test's `@ts-expect-error` must state why the error is
+  expected.
 - Keep code inside the enforced cognitive and structural limits: cognitive complexity is 12, classic
   cyclomatic complexity is 10, and imports are limited to 10 including type-only imports. Resolve
   findings by cohesive decomposition. Do not add a size allowlist, per-file override, or unlisted
   `oxlint-disable` directive; the authored suppression allowlist is exact and tested by
   `pnpm test:maintainability-lint`.
-- Direct re-export files are pure barrels: they may contain imports, type declarations, and export
-  wiring only; runtime implementation mixed into a direct re-export file is rejected.
+- Files that re-export are pure barrels: a file with a direct re-export (`export … from`) or a local
+  `export { … }` / `export type { … }` of an imported binding may contain imports, type
+  declarations, and export wiring only; runtime implementation mixed into it is rejected. Import a
+  name from the module that defines it instead of re-exporting it beside an implementation.
 - Preserve deterministic generation, path safety, transactional publication, and per-call isolation.
 - Public contract changes require runtime and type tests, a Changeset, and migration documentation.
 - Public examples must be executable or mapped to typechecked fixtures.
 - Use English Conventional Commits and keep commits focused at green boundaries.
 
 Tests normally live in `__test__/` and use `*.test.ts`; shared factories and the integration spec
-belong in `packages/test-utils`. Run the CLI locally with
+belong in `packages/test-utils`. When a suite outgrows the test file budget, split it into a
+directory named after its subject (for example `__test__/unit/ApiClient/`) with files named for the
+behavior they cover, and move setup that two or more of those files need into one shared module in
+that directory (for example `fixtures.ts`). Do not copy setup between test files. Vitest gates that
+select tests by path name suite directories or unsplit test files, which `pnpm verify:test-gates`
+enforces, so a later split stays covered. Run the CLI locally with
 `pnpm --filter @rexeus/typeweaver run cli -- <arguments>`. After a full build, run the frozen
 install again to recreate CLI binary symlinks before generation or bundle tests.
 

@@ -7,23 +7,29 @@ import {
 import type { IHttpResponse } from "@rexeus/typeweaver-core";
 import { executeMiddlewarePipeline } from "./Middleware.js";
 import { StateMap } from "./StateMap.js";
+import { handleAppError, validateAppResponse } from "./TypeweaverAppErrorHandling.js";
 import type { FetchApiAdapter } from "./FetchApiAdapter.js";
 import type { Middleware } from "./Middleware.js";
-import type { Router, RouteDefinition, RouteMatch } from "./Router.js";
+import type { Router } from "./Router.js";
+import type { RouteDefinition, RouteMatch } from "./routerTypes.js";
 import type { ServerContext } from "./ServerContext.js";
 
+/**
+ * Runs one Fetch request through the app: adapter conversion, route matching,
+ * the middleware chain, the matched handler with response validation and the
+ * route's error handlers, and HEAD body stripping.
+ *
+ * `safeOnError` reports failures that the pipeline recovers from, such as an
+ * error handler that throws.
+ */
 export async function processAppRequest(options: {
   readonly request: Request;
   readonly adapter: FetchApiAdapter;
   readonly router: Router;
   readonly middlewares: Middleware[];
-  readonly resolveAndExecute: (
-    match: RouteMatch | undefined,
-    pathname: string,
-    ctx: ServerContext,
-  ) => Promise<IHttpResponse>;
+  readonly safeOnError: (error: unknown) => void;
 }): Promise<IHttpResponse> {
-  const { request, adapter, router, middlewares, resolveAndExecute } = options;
+  const { request, adapter, router, middlewares, safeOnError } = options;
   const url = new URL(request.url);
   const httpRequest = await adapter.toRequest(request, url);
   const match = router.match(request.method, url.pathname);
@@ -40,39 +46,44 @@ export async function processAppRequest(options: {
       : undefined,
   };
   const response = await executeMiddlewarePipeline(middlewares, ctx, () =>
-    resolveAndExecute(match, url.pathname, ctx),
+    match ? executeRoute(match, ctx, safeOnError) : respondWithoutRoute(router, url.pathname),
   );
   return request.method.toUpperCase() === "HEAD" ? { ...response, body: undefined } : response;
 }
 
-export async function resolveAppRequest(options: {
-  readonly match: RouteMatch | undefined;
-  readonly pathname: string;
-  readonly ctx: ServerContext;
-  readonly router: Router;
-  readonly executeHandler: (ctx: ServerContext, route: RouteDefinition) => Promise<IHttpResponse>;
-  readonly validateResponse: (
-    route: RouteDefinition,
-    response: IHttpResponse,
-    ctx: ServerContext,
-  ) => Promise<IHttpResponse>;
-  readonly handleError: (
-    error: unknown,
-    ctx: ServerContext,
-    route: RouteDefinition,
-  ) => Promise<IHttpResponse>;
-}): Promise<IHttpResponse> {
-  const { match, pathname, ctx, router, executeHandler, validateResponse, handleError } = options;
-  if (match) {
-    const routeCtx = withPathParams(ctx, match.params);
-    try {
-      const response = await executeHandler(routeCtx, match.route);
-      return await validateResponse(match.route, normalizeHttpResponse(response), routeCtx);
-    } catch (error) {
-      return handleError(error, routeCtx, match.route);
-    }
+async function executeRoute(
+  match: RouteMatch,
+  ctx: ServerContext,
+  safeOnError: (error: unknown) => void,
+): Promise<IHttpResponse> {
+  const { route } = match;
+  const routeCtx = withPathParams(ctx, match.params);
+  try {
+    const response = await executeRouteHandler(route, routeCtx);
+    // Await inside the `try` so a validator that throws or rejects reaches the
+    // route's error handlers instead of the app's generic safety net.
+    return await validateAppResponse({
+      route,
+      response: normalizeHttpResponse(response),
+      ctx: routeCtx,
+      safeOnError,
+    });
+  } catch (error) {
+    return handleAppError({ error, ctx: routeCtx, route, safeOnError });
   }
+}
 
+async function executeRouteHandler(
+  route: RouteDefinition,
+  ctx: ServerContext,
+): Promise<IHttpResponse> {
+  const request = route.routerConfig.validateRequests
+    ? route.requestValidator.validate(ctx.request)
+    : ctx.request;
+  return route.handler(request, ctx);
+}
+
+async function respondWithoutRoute(router: Router, pathname: string): Promise<IHttpResponse> {
   const pathMatch = router.matchPath(pathname);
   if (pathMatch) {
     return createDefaultErrorResponse(methodNotAllowedDefaultError, {

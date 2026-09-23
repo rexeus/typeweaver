@@ -22,6 +22,7 @@ type AcceptsRawArray<TInput> =
         ? true
         : false;
 
+/** Strips transparent public wrappers without following pipes. */
 export type UnwrapTransparent<TSchema> =
   TSchema extends z.ZodOptional<infer TInner>
     ? UnwrapTransparent<TInner>
@@ -40,6 +41,11 @@ export type UnwrapTransparent<TSchema> =
                 : TSchema extends z.ZodPrefault<infer TInner>
                   ? UnwrapTransparent<TInner>
                   : TSchema;
+/**
+ * Alternates transparent public wrapper unwrapping with pipe input traversal,
+ * matching the runtime cardinality helper exactly. Opaque forms (`lazy`,
+ * unions, effects) are not unwrapped, so recursion always terminates.
+ */
 type UnwrapInputSchema<TSchema> =
   UnwrapTransparent<TSchema> extends infer TUnwrapped
     ? TUnwrapped extends z.ZodPipe<infer TIn, infer _TOut>
@@ -77,6 +83,11 @@ type OutputClassify<TOutput> =
           : "unsupported";
 type FieldOutputKind<TSchema> = OutputClassify<z.output<TSchema>>;
 type RawTransportKind = "scalar" | "array";
+/**
+ * A pipe input is pass-through when it forwards the raw value unchanged: a
+ * bare `z.unknown()`/`z.any()` (or a transparent wrapper around one). In that
+ * case the downstream schema must accept the raw transport value itself.
+ */
 type IsPassThroughInput<TInput> =
   UnwrapTransparent<TInput> extends infer TUnwrapped
     ? TUnwrapped extends z.core.$ZodUnknown | z.core.$ZodAny
@@ -89,6 +100,12 @@ type AcceptsRawTransport<
 > = TTransport extends "scalar"
   ? AcceptsRawScalar<z.input<TSchema>>
   : AcceptsRawArray<z.input<TSchema>>;
+/**
+ * True when an opaque transform sits anywhere on the raw-input chain before a
+ * schema that proves raw acceptance. `z.preprocess` always creates such a
+ * transform, so an arbitrary callback is rejected rather than trusted; an
+ * ordinary typed string transform keeps its typed input and stays acceptable.
+ */
 export type HasOpaqueTransform<TInput> =
   UnwrapTransparent<TInput> extends infer TUnwrapped
     ? TUnwrapped extends z.core.$ZodTransform<infer _TOutput, infer _TInput>
@@ -97,6 +114,13 @@ export type HasOpaqueTransform<TInput> =
         ? HasOpaqueTransform<TInner>
         : false
     : false;
+/**
+ * Resolves whether a field's transport input accepts a raw string (or raw
+ * string array). A bare `unknown`/`any` pipe input delegates the decision to
+ * the downstream schema, so `unknown.pipe(z.coerce.number())` stays valid while
+ * `unknown.pipe(z.number())` is rejected. Any `z.preprocess`/transform input is
+ * opaque and rejected.
+ */
 export type AcceptsRawInput<TSchema, TTransport extends RawTransportKind> =
   UnwrapTransparent<TSchema> extends infer TUnwrapped
     ? TUnwrapped extends z.ZodPipe<infer TIn, infer TOut>

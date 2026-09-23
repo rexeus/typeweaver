@@ -29,8 +29,6 @@ import {
  * @property {string | undefined} tsconfig
  */
 
-export { isNonEmptyString, isRecord };
-
 /**
  * @param {string} absoluteManifestPath
  * @param {string} manifestPath

@@ -59,7 +59,8 @@ export type BuiltGeneratorContext = {
  *
  * The `FileSystem` requirement is the platform-agnostic service from
  * `effect` — a Node.js programmatic edge provides `NodeFileSystem.layer` from
- * `@effect/platform-node` in production and `InMemoryFileSystem` in tests.
+ * `@effect/platform-node-shared` in production and `InMemoryFileSystem` in
+ * tests.
  */
 export type ContextBuilderShape = {
   readonly buildPluginContext: (

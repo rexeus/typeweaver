@@ -1,4 +1,5 @@
-export { COMMAND_EXIT_CODES, runGeneratedCommandCli } from "./runtime.js";
+export { COMMAND_EXIT_CODES } from "./commandExitCodes.js";
+export { runGeneratedCommandCli } from "./runtime.js";
 export { defineGeneratedCommand } from "./types.js";
 export type {
   GeneratedCommand,

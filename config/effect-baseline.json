@@ -2,7 +2,6 @@
   "runtimeVersion": "4.0.0-rc.116",
   "peerRange": "4.0.0-rc.116",
   "acceptedEffectDependencies": {
-    "@effect/platform-node": "4.0.0-rc.116",
     "@effect/platform-node-shared": "4.0.0-rc.116",
     "@effect/vitest": "4.0.0-rc.116"
   },

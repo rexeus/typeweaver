@@ -10,11 +10,11 @@ import {
   InvalidApiMetadataError,
   UnknownTagError,
 } from "./errors/index.js";
+import { validateAuthorizationHeader } from "./securityAuthorization.js";
 import {
   isNonEmpty,
   normalizeSecuritySchemes,
   resolveSecurity,
-  validateAuthorizationHeader,
 } from "./securityNormalization.js";
 import type { NormalizedSecurity } from "./NormalizedSpec.js";
 

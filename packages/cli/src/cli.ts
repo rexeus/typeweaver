@@ -1,10 +1,11 @@
+import { runMain as runNodeMain } from "@effect/platform-node-shared/NodeRuntime";
 import { Effect, Layer, References } from "effect";
 import { CliOutput, Command } from "effect/unstable/cli";
 import { cli } from "./cliCommands.js";
 import { cliPackageVersion } from "./cliMetadata.js";
 import { ProductionLayer, VerboseLayer } from "./effectRuntime.js";
 import { formatErrorForCli } from "./formatErrorForCli.js";
-import { nodePlatformLayer, runNodeMain } from "./nodePlatform.js";
+import { nodePlatformLayer } from "./nodePlatform.js";
 import { isOnlyValidationErrorCause } from "./validationErrorFilter.js";
 
 // The chosen Layer is fixed at program-construction time — there is no

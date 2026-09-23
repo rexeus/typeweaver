@@ -1,8 +1,7 @@
-import { layer as nodeChildProcessSpawnerLayer } from "@effect/platform-node/NodeChildProcessSpawner";
-import { layer as nodePathLayer } from "@effect/platform-node/NodePath";
-import { runMain as runNodeMain } from "@effect/platform-node/NodeRuntime";
-import { layer as nodeStdioLayer } from "@effect/platform-node/NodeStdio";
-import { layer as nodeTerminalLayer } from "@effect/platform-node/NodeTerminal";
+import { layer as nodeChildProcessSpawnerLayer } from "@effect/platform-node-shared/NodeChildProcessSpawner";
+import { layer as nodePathLayer } from "@effect/platform-node-shared/NodePath";
+import { layer as nodeStdioLayer } from "@effect/platform-node-shared/NodeStdio";
+import { layer as nodeTerminalLayer } from "@effect/platform-node-shared/NodeTerminal";
 import { Layer } from "effect";
 
 const nodeChildProcessSpawnerWithPathLayer = nodeChildProcessSpawnerLayer.pipe(
@@ -15,5 +14,3 @@ export const nodePlatformLayer = Layer.mergeAll(
   nodeStdioLayer,
   nodeChildProcessSpawnerWithPathLayer
 );
-
-export { runNodeMain };

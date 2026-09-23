@@ -5,12 +5,12 @@ import {
   InitTargetNotEmptyError,
   InvalidInitPackageError,
 } from "../errors/ProjectInitError.js";
-import { fileSystemError } from "./internal/projectPublishing.js";
+import { fileSystemError } from "./internal/projectPublishingTypes.js";
 import type {
   ProjectInitFailure,
   ProjectInitFileSystemError,
 } from "../errors/ProjectInitError.js";
-import type { PlannedInitFile } from "./internal/projectPublishing.js";
+import type { PlannedInitFile } from "./internal/projectPublishingTypes.js";
 import type {
   InitConfigFormat,
   InitializeProjectParams,

@@ -6,6 +6,15 @@
  */
 
 export * from "./TypeweaverHono.js";
+export type {
+  HonoBodyParseErrorHandler,
+  HonoHttpResponseErrorHandler,
+  HonoRequestValidationErrorHandler,
+  HonoResponseValidationErrorHandler,
+  HonoUnknownErrorHandler,
+  TypeweaverHonoOptions,
+  TypeweaverHonoRequestOptions,
+} from "./honoTypes.js";
 export * from "./HonoRequestHandler.js";
 export * from "./HonoAdapter.js";
 export { HonoBodyParseError, HonoResponseSerializationError } from "./Errors.js";

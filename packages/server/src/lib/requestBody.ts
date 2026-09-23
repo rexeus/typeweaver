@@ -4,14 +4,8 @@ import {
   RequestBodyDrainTimeoutError,
 } from "./errors/index.js";
 import { collectRequestBody } from "./requestBodyCollection.js";
-import {
-  bodyDrainError,
-  drainRequestStream,
-  REQUEST_DRAIN_TIMEOUT_MS,
-} from "./requestBodyDrain.js";
+import { bodyDrainError, drainRequestStream } from "./requestBodyDrain.js";
 import type { IncomingMessage } from "node:http";
-
-export { REQUEST_DRAIN_TIMEOUT_MS };
 
 export function shouldValidateRequestBody(method?: string): boolean {
   return method !== "GET" && method !== "HEAD";

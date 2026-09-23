@@ -12,7 +12,7 @@ const ruleTester = new RuleTester({
 const testCases = {
   valid: [
     {
-      name: "ignores files without direct re-exports",
+      name: "ignores files without re-exports",
       code: "export const implementation = 1;",
     },
     {
@@ -63,6 +63,33 @@ const testCases = {
       filename: "not-a-barrel.ts",
       code: 'export { value } from "./value.js";',
     },
+    {
+      name: "accepts a namespace direct re-export",
+      code: 'export * as values from "./value.js";',
+    },
+    {
+      name: "accepts a default direct re-export",
+      code: 'export { default } from "./value.js";',
+    },
+    {
+      name: "accepts a local barrel that exports imported bindings",
+      code: [
+        'import { value } from "./value.js";',
+        'import type { Value } from "./value.js";',
+        "export { value };",
+        "export type { Value };",
+      ].join("\n"),
+    },
+    {
+      name: "ignores a module that exports only its own declarations",
+      code: [
+        'import { dependency } from "./dependency.js";',
+        "const local = dependency + 1;",
+        "type Local = typeof local;",
+        "export { local };",
+        "export type { Local };",
+      ].join("\n"),
+    },
   ],
   invalid: [
     {
@@ -102,6 +129,52 @@ const testCases = {
         'console.log("implementation");',
       ].join("\n"),
       errors: [{ messageId: "mixedImplementation" }],
+    },
+    {
+      name: "rejects a runtime variable beside a namespace direct re-export",
+      code: [
+        'export * as values from "./value.js";',
+        "export const local = 1;",
+      ].join("\n"),
+      errors: [{ messageId: "mixedImplementation" }],
+    },
+    {
+      name: "rejects a runtime function beside a default direct re-export",
+      code: [
+        'export { default } from "./value.js";',
+        "export function local() {}",
+      ].join("\n"),
+      errors: [{ messageId: "mixedImplementation" }],
+    },
+    {
+      name: "rejects a runtime variable beside an imported value export",
+      code: [
+        'import { value } from "./value.js";',
+        "export { value };",
+        "export const local = 1;",
+      ].join("\n"),
+      errors: [{ messageId: "mixedImplementation" }],
+    },
+    {
+      name: "rejects a runtime function beside an imported type export",
+      code: [
+        'import type { Value } from "./value.js";',
+        "export type { Value };",
+        "export function local(): void {}",
+      ].join("\n"),
+      errors: [{ messageId: "mixedImplementation" }],
+    },
+    {
+      name: "rejects a local export mixing imported and local bindings",
+      code: [
+        'import { value } from "./value.js";',
+        "const local = 1;",
+        "export { local, value };",
+      ].join("\n"),
+      errors: [
+        { messageId: "mixedImplementation" },
+        { messageId: "mixedImplementation" },
+      ],
     },
   ],
 };

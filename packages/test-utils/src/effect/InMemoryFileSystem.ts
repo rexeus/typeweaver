@@ -22,8 +22,6 @@ import type {
   InMemoryStore,
 } from "./inMemoryFileSystemStore.js";
 
-export type { InMemoryFsState };
-
 export type InMemoryFileSystemHandle = {
   readonly layer: Layer.Layer<FileSystem.FileSystem>;
   readonly state: InMemoryFsState;
@@ -47,7 +45,24 @@ const createOverrides = (
   makeTempDirectoryScoped: makeTempDirectoryScopedOverride(store),
 });
 
-/** Test-only `FileSystem.FileSystem` layer backed by an in-memory store. */
+/**
+ * Test-only `FileSystem.FileSystem` layer backed by an in-memory store.
+ *
+ * Supports the operations typeweaver's services actually use:
+ *   - `makeDirectory`, `writeFile`, `writeFileString`, `readFile`,
+ *     `readFileString`, `readDirectory`
+ *   - `remove`, `exists`, `realPath`
+ *   - `rename`, `stat`, `chmod` (atomic-replace write path)
+ *   - `makeTempDirectoryScoped` (honors the `directory` option)
+ *
+ * Unsupported methods inherit no-op stubs from `FileSystem.makeNoop`. Use
+ * this layer in tests to substitute for `NodeFileSystem.layer`:
+ *
+ *   const { layer, state } = makeInMemoryFileSystem();
+ *   await Effect.runPromise(program.pipe(Effect.provide(layer)));
+ *
+ * The `state` handle exposes the stored files and directories for assertions.
+ */
 export const makeInMemoryFileSystem = (): InMemoryFileSystemHandle => {
   const store = createStore();
   return {

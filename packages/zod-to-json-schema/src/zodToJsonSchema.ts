@@ -1,9 +1,7 @@
 import { z } from "zod";
-import {
-  collectZodWarnings,
-  createWarning,
-} from "./internal/collectZodWarnings.js";
+import { collectZodWarnings } from "./internal/collectZodWarnings.js";
 import { normalizeJsonSchema } from "./internal/normalizeJsonSchema.js";
+import { createWarning } from "./internal/warningRules.js";
 import { getSchemaType } from "./internal/zodIntrospection.js";
 import type {
   JsonSchema,

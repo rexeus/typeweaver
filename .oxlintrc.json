@@ -32,7 +32,7 @@
       {
         "max": 250,
         "skipBlankLines": true,
-        "skipComments": false
+        "skipComments": true
       }
     ],
     "eslint/max-lines-per-function": [
@@ -85,7 +85,13 @@
     "sonarjs/no-nested-switch": "error",
     "typeweaver/pure-barrel": "error"
   },
-  "ignorePatterns": ["**/dist/**", "**/node_modules/**", ".vscode/**", "**/output/**", "**/outputs/**"],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/node_modules/**",
+    ".vscode/**",
+    "packages/test-utils/src/test-project/output/**",
+    "packages/*/test/outputs/**"
+  ],
   "overrides": [
     {
       "files": [
@@ -112,7 +118,7 @@
           {
             "max": 350,
             "skipBlankLines": true,
-            "skipComments": false
+            "skipComments": true
           }
         ],
         "eslint/max-lines-per-function": "off",
@@ -132,6 +138,16 @@
       ],
       "plugins": ["eslint", "typescript", "unicorn", "oxc", "import"],
       "rules": {
+        "typescript/ban-ts-comment": [
+          "error",
+          {
+            "ts-expect-error": "allow-with-description",
+            "ts-ignore": true,
+            "ts-nocheck": true,
+            "ts-check": false,
+            "minimumDescriptionLength": 3
+          }
+        ],
         "typescript/consistent-type-definitions": ["error", "type"],
         "typescript/no-explicit-any": "error",
         "typescript/no-floating-promises": "error",
@@ -163,6 +179,16 @@
       ],
       "plugins": ["eslint", "typescript", "unicorn", "oxc", "import"],
       "rules": {
+        "typescript/ban-ts-comment": [
+          "error",
+          {
+            "ts-expect-error": "allow-with-description",
+            "ts-ignore": true,
+            "ts-nocheck": true,
+            "ts-check": false,
+            "minimumDescriptionLength": 3
+          }
+        ],
         "typescript/consistent-type-definitions": ["error", "type"],
         "typescript/no-explicit-any": "error",
         "typescript/no-floating-promises": "error",

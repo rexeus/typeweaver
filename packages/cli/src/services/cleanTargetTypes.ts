@@ -1,5 +1,10 @@
 import fs from "node:fs";
 
+/**
+ * Filesystem probes the clean-target guard depends on. Kept narrow so tests
+ * and Effect-native callers can substitute fakes (the FileSystem service)
+ * without dragging in unrelated `fs` surface.
+ */
 export type CleanTargetFs = {
   readonly exists: (probePath: string) => boolean;
   readonly isSymbolicLink: (probePath: string) => boolean;

@@ -53,6 +53,12 @@ const declaredSpecifier = (
   return undefined;
 };
 
+/**
+ * Resolves the project's declared Effect and requires the resolved version to
+ * satisfy the declaration under standard semver. A hoisted parent copy is
+ * accepted only when it satisfies the declaration; otherwise the result is
+ * `Unresolved` and the doctor fails rather than passing on the parent.
+ */
 const resolveDeclaredEffect = (
   manifestPath: string,
   specifier: string
@@ -92,6 +98,11 @@ const resolveDeclaredEffect = (
   return { _tag: "Resolved", version, declaredSpecifier: specifier };
 };
 
+/**
+ * Resolves the Effect declaration owned by the project at
+ * `currentWorkingDirectory`, never a parent tree or the CLI's bundled runtime.
+ * A project boundary without an Effect declaration is `NotDeclared`.
+ */
 export const resolveWorkspaceEffect = (
   currentWorkingDirectory: string
 ): WorkspaceEffectDeclaration => {

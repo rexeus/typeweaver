@@ -70,3 +70,9 @@ setting:
 asserts the effective options plus the exact diagnostic code for every valid and invalid probe. It
 currently proves 20 compiler options and 18 diagnostics across the four profiles (`base`, `node`,
 `checkjs`, and the root config) and fails when a profile is weakened.
+
+It also resolves every tracked or new `tsconfig*.json` in the repository (packages, examples,
+fixtures, and scripts) with `tsc --showConfig` and fails when any of them relaxes a strictness
+option that `base.json` enables, for example `"exactOptionalPropertyTypes": false` in a package
+config. A probe layers exactly that override on `packages/server/tsconfig.json` to prove the
+rejection.

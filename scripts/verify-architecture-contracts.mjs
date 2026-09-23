@@ -113,6 +113,10 @@ const commands = [
     args: ["run", "test:quality-contracts"],
   },
   {
+    label: "Vitest gate filter contracts",
+    args: ["run", "verify:test-gates"],
+  },
+  {
     label: "Standalone Effect tsgo diagnostics",
     args: ["run", "effect:diagnostics"],
   },

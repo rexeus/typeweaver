@@ -9,6 +9,7 @@ export type SpecBundlerConfig = {
   readonly pinExternalImports?: boolean;
 };
 
+/** Minimal URL shape so Windows-path tests can inject a converter. */
 export type FileUrlLike = { readonly href: string };
 export type FileUrlConverter = (filePath: string) => FileUrlLike;
 

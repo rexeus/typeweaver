@@ -1,5 +1,18 @@
 import assert from "node:assert/strict";
 import path from "node:path";
+import { validateEffectDirective } from "./lib/effect-diagnostics-allowlist.mjs";
+import {
+  effectDiagnosticExemption,
+  isArchitecturalNodeBuiltinPath,
+  isBlockingEffectDiagnostic,
+  isBoundaryEffectPath,
+} from "./lib/effect-diagnostics-policy.mjs";
+import {
+  discoverEffectProjects,
+  isExcludedEffectPath,
+  recommendedSeverityMap,
+  workspaceRoot,
+} from "./lib/effect-diagnostics-projects.mjs";
 import {
   acceptedSource,
   cleanSource,
@@ -10,14 +23,10 @@ import {
 } from "./lib/effect-diagnostics-test-probes.mjs";
 import {
   assertEffectSourceCoverage,
-  discoverEffectProjects,
-  isArchitecturalNodeBuiltinPath,
-  isBlockingEffectDiagnostic,
-  isBoundaryEffectPath,
-  isExcludedEffectPath,
-  recommendedSeverityMap,
-  validateEffectDirective,
-  workspaceRoot,
+  effectDiagnostics,
+  exemptedEffectDiagnostics,
+  listExemptedEffectDiagnostics,
+  summarizeExemptedEffectDiagnostics,
 } from "./lib/effect-diagnostics.mjs";
 
 const severityMap = recommendedSeverityMap();
@@ -211,6 +220,66 @@ try {
     ),
     true
   );
+  assert.equal(
+    effectDiagnosticExemption(
+      diagnostic(
+        path.join(workspaceRoot, "packages/gen/src/services/nested/deep.ts"),
+        "globalConsole",
+        "warning"
+      )
+    ),
+    "production-boundary",
+    "a directory entry exempts every file below its prefix"
+  );
+  assert.equal(
+    effectDiagnosticExemption(
+      diagnostic(
+        path.join(workspaceRoot, "packages/cli/src/entry.ts"),
+        "asyncFunction",
+        "error"
+      )
+    ),
+    undefined
+  );
+  const testFile = path.join(workspaceRoot, "packages/cli/__test__/probe.ts");
+  const generatedFile = path.join(
+    workspaceRoot,
+    "packages/cli/test/outputs/generated.ts"
+  );
+  const exemptedWarning = diagnostic(testFile, "asyncFunction", "warning");
+  const blockingWarning = diagnostic(testFile, "floatingEffect", "warning");
+  /** @type {import("./lib/effect-diagnostics-projects.mjs").EffectProjectResult} */
+  const syntheticResult = {
+    project: path.join(workspaceRoot, "packages/cli/tsconfig.json"),
+    output: {
+      summary: {
+        filesChecked: 2,
+        totalFiles: 2,
+        errors: 0,
+        warnings: 3,
+        messages: 0,
+      },
+      files: [{ file: testFile }, { file: generatedFile }],
+      diagnostics: [
+        exemptedWarning,
+        blockingWarning,
+        diagnostic(generatedFile, "asyncFunction", "warning"),
+      ],
+    },
+  };
+  // Two projects that share a file report each diagnostic once.
+  const syntheticResults = [syntheticResult, syntheticResult];
+  assert.deepEqual(effectDiagnostics(syntheticResults), [blockingWarning]);
+  const exempted = exemptedEffectDiagnostics(syntheticResults);
+  assert.deepEqual(exempted, [
+    { ...exemptedWarning, category: "test-example-boundary" },
+  ]);
+  assert.deepEqual(summarizeExemptedEffectDiagnostics(exempted), [
+    "test-example-boundary asyncFunction: 1",
+  ]);
+  assert.deepEqual(listExemptedEffectDiagnostics(exempted), [
+    "packages/cli/__test__/probe.ts:1:1 [test-example-boundary] asyncFunction: asyncFunction",
+  ]);
   assert(
     clean.files.every(
       file => file.detectedEffect === "v4" && file.supportedEffect === "v4"
@@ -221,5 +290,5 @@ try {
 }
 
 process.stdout.write(
-  "Effect tsgo probes passed: clean, effectFnImplicitAny, Recommended warning promotion, narrow exception, broad exception, stale exception, and v4 detection\n"
+  "Effect tsgo probes passed: clean, effectFnImplicitAny, Recommended warning promotion, narrow exception, broad exception, stale exception, exempted-warning reporting, and v4 detection\n"
 );

@@ -8,7 +8,7 @@ import { HttpMethod } from "../../src/HttpMethod.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 import { TestAssertionError } from "../errors/index.js";
 import type { OperationDefinition } from "../../src/defineOperation.js";
-import type { ResponseDefinition } from "../../src/defineResponse.js";
+import type { ResponseDefinition } from "../../src/responseDefinitionTypes.js";
 
 const testMetadata = {
   title: "Core Test API",

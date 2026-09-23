@@ -40,6 +40,21 @@ export type NodeAdapterOptions = {
   readonly maxBodySize?: number;
 };
 
+/**
+ * Adapts a `TypeweaverApp` to Node.js `http.createServer`.
+ *
+ * Converts `IncomingMessage` to a Fetch API `Request`, calls `app.fetch()`,
+ * and writes the `Response` back to `ServerResponse`.
+ *
+ * @example
+ * ```typescript
+ * import { createServer } from "node:http";
+ * import { nodeAdapter } from "./generated/lib/server/index.js";
+ * import app from "./server.js";
+ *
+ * createServer(nodeAdapter(app)).listen(3000);
+ * ```
+ */
 export function nodeAdapter(
   app: TypeweaverApp<Record<string, unknown>>,
   options?: NodeAdapterOptions
@@ -121,6 +136,9 @@ async function handleRequest(options: HandleRequestOptions): Promise<void> {
     const shouldValidateBody = shouldValidateRequestBody(req.method);
 
     enforceContentLengthLimit(req, bodyLimitPolicy.maxBodySize);
+    // Guard synchronously so readable-body listeners attach in the same tick as
+    // dispatch; an unconditional await would let an early "error"/"close" event
+    // fire before the body reader is listening.
     if (!shouldValidateBody && hasReadableRequestBody(req)) {
       await drainUnvalidatedRequestBody(req, bodyLimitPolicy);
     }

@@ -4,6 +4,7 @@ import { Effect, Tracer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { effectRuntime } from "../../src/effectRuntime.js";
 import { Generator } from "../../src/services/Generator.js";
+import { writeTinySpec } from "../helpers/specFiles.js";
 
 type CapturedSpan = {
   readonly name: string;
@@ -51,45 +52,6 @@ const makeCapturingTracer = (recorded: CapturedSpan[]): Tracer.Tracer => {
       return span;
     },
   };
-};
-
-const writeTinySpec = (workspace: string): string => {
-  const specFile = path.join(workspace, "spec", "index.ts");
-  fs.mkdirSync(path.dirname(specFile), { recursive: true });
-  fs.writeFileSync(
-    specFile,
-    [
-      'import { defineOperation, defineResponse, defineSpec, HttpMethod, HttpStatusCode } from "@rexeus/typeweaver-core";',
-      'import { z } from "zod";',
-      "",
-      "const itemLoaded = defineResponse({",
-      '  name: "ItemLoaded",',
-      "  statusCode: HttpStatusCode.OK,",
-      '  description: "Item loaded",',
-      "  body: z.object({ id: z.string() }),",
-      "});",
-      "",
-      "export const spec = defineSpec({",
-      '  metadata: { title: "Items API", version: "1.0.0" },',
-      "  resources: {",
-      "    item: {",
-      "      operations: [",
-      "        defineOperation({",
-      '          operationId: "getItem",',
-      '          path: "/items/:itemId",',
-      "          method: HttpMethod.GET,",
-      '          summary: "Get item",',
-      "          request: { param: z.object({ itemId: z.string() }) },",
-      "          responses: [itemLoaded],",
-      "        }),",
-      "      ],",
-      "    },",
-      "  },",
-      "});",
-      "",
-    ].join("\n")
-  );
-  return specFile;
 };
 
 const writeObservablePlugin = (workspace: string): string => {

@@ -33,6 +33,9 @@ export type FetchApiAdapterOptions = {
  * This is the **only** place where framework-specific types exist.
  * Everything inside the middleware pipeline and handlers works
  * exclusively with typeweaver's native types.
+ *
+ * Works with all runtimes that support the Fetch API:
+ * Bun, Deno, Node.js (>=18), Cloudflare Workers.
  */
 export class FetchApiAdapter {
   private readonly bodyLimitPolicy: BodyLimitPolicy;
@@ -43,6 +46,17 @@ export class FetchApiAdapter {
       createFetchBodyLimitPolicy(options?.maxBodySize);
   }
 
+  /**
+   * Converts a Fetch API Request to an IRawHttpRequest.
+   *
+   * Accepts an optional pre-parsed URL to avoid redundant parsing.
+   *
+   * @param request - The Fetch API Request object
+   * @param url - Optional pre-parsed URL object to avoid double parsing
+   * @returns Promise resolving to an IRawHttpRequest
+   * @throws BodyParseError when the request body is malformed
+   * @throws PayloadTooLargeError when the request body exceeds the body limit
+   */
   public async toRequest(
     request: Request,
     url?: URL
@@ -57,6 +71,12 @@ export class FetchApiAdapter {
     };
   }
 
+  /**
+   * Converts an IHttpResponse to a Fetch API Response.
+   *
+   * @param response - The IHttpResponse to convert
+   * @returns A Fetch API Response object
+   */
   public toResponse(response: IHttpResponse): Response {
     return new Response(serializeFetchResponseBody(response.body), {
       status: response.statusCode,

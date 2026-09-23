@@ -19,6 +19,13 @@ type ObjectIssues<
     TAllowArray
   >;
 }[keyof TShape & string];
+/**
+ * An object schema is open when its output has a string index signature with a
+ * value other than `never`. That covers `z.looseObject`, `.loose()`,
+ * `.passthrough()`, and `.catchall(...)`; `.catchall(z.never())` is closed.
+ * The broad base `ZodObject` shape is handled before this by its index
+ * signature and remains the intentional `RequestDefinition` escape.
+ */
 type IsOpenObjectSchema<TSchema> = string extends keyof z.output<TSchema>
   ? [z.output<TSchema>[string]] extends [never]
     ? false
@@ -36,6 +43,12 @@ type ObjectContainerIssues<
     : IsOpenObjectSchema<TSchema> extends true
       ? `${TPart} must not use an open object (loose/catchall); use z.record for undeclared keys`
       : ObjectIssues<TShape, TPart, TAllowArray>;
+/**
+ * True only for the exact broad base schema carried by the container defaults
+ * of `RequestDefinition` (core `$ZodType` or the classic `z.ZodType` alias).
+ * That unresolved value is the single intentional escape; every concrete
+ * schema flows through `FieldIssue` and its output classification.
+ */
 type IsBroadBaseSchema<TSchema> = [TSchema] extends [z.core.$ZodType]
   ? [z.core.$ZodType] extends [TSchema]
     ? true
@@ -43,12 +56,28 @@ type IsBroadBaseSchema<TSchema> = [TSchema] extends [z.core.$ZodType]
       ? true
       : false
   : false;
+/**
+ * True when a record key schema has a finite string literal/union output that
+ * contains the reserved `__proto__` key. Broad `string` outputs are left to the
+ * runtime identity guard.
+ */
 type HasReservedLiteralKeyOutput<TKey> =
   string extends z.output<TKey>
     ? false
     : "__proto__" extends z.output<TKey>
       ? true
       : false;
+/**
+ * Record keys must preserve key identity: a transforming key schema can emit
+ * reserved or colliding keys that Zod record parsing cannot round-trip.
+ * Detectable pipes/transforms are rejected; statically known `__proto__`
+ * outputs are rejected; non-string key inputs/outputs are rejected. The key
+ * check is always evaluated, including for the broad base record value, which
+ * only escapes the record-value field check. A broad key schema (`string`
+ * output, including the base `$ZodRecordKey`) is left to the generated
+ * validator's runtime identity guard, which also covers opaque Zod string
+ * overwrites such as `.trim()`/`.toLowerCase()`.
+ */
 type RecordKeyIssue<TKey, TPart extends BoundaryPart> =
   UnwrapTransparent<TKey> extends z.ZodPipe<infer _TIn, infer _TOut>
     ? `${TPart} record keys must not transform key identity`

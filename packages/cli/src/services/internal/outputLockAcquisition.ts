@@ -14,23 +14,11 @@ import {
   LEGACY_OUTPUT_LOCK_DIRECTORY,
   outputLockDirectory,
 } from "./outputCoordinationArtifact.js";
-import {
-  acquireOrReclaimOutputLock,
-  lockFencePath,
-  sameLockInfo,
-} from "./outputLockOperations.js";
-import {
-  forgetFailedOutputLockRelease,
-  rememberFailedOutputLockRelease,
-} from "./outputLockState.js";
+import { acquireOrReclaimOutputLock } from "./outputLockOperations.js";
 import type {
   OutputLock,
   OutputLockAcquisitionHooks,
 } from "./outputLockOperations.js";
-
-export type { OutputLock, OutputLockAcquisitionHooks };
-export { lockFencePath, sameLockInfo };
-export { forgetFailedOutputLockRelease, rememberFailedOutputLockRelease };
 
 const NO_OUTPUT_LOCK_HOOKS: OutputLockAcquisitionHooks = {
   onLockDirectoryCreated: () => undefined,
@@ -93,6 +81,29 @@ const mapAcquireOutputLockError = (
   throw error;
 };
 
+/**
+ * Acquire an exclusive lock on `outputDir`. The lock is a flat directory
+ * directly under the trusted host temp root, named deterministically from the
+ * physical output identity (`outputLockDirectory`); `mkdir` is atomic and
+ * fails with `EEXIST` if the lock already exists. Keeping the coordination
+ * tree out of configured output lets read-only checks hold the same lock
+ * without transiently mutating output.
+ *
+ * Before acquiring, a legacy in-output `.typeweaver-lock` is inspected: a live
+ * holder or malformed/ownership-uncertain metadata fails closed because the
+ * current CLI cannot write that legacy lock to coordinate with an older
+ * process. Complete metadata owned by a dead process is stale and does not
+ * block.
+ *
+ * Ownership metadata is published atomically and contains a unique token.
+ * Missing or malformed metadata fails closed so another process cannot reclaim
+ * a lock while its owner is still publishing it. If complete metadata belongs
+ * to a dead PID, the stale lock is reclaimed only while those metadata remain
+ * unchanged.
+ *
+ * Pair via `Effect.acquireRelease`: release verifies the ownership token,
+ * so a delayed finalizer cannot remove a replacement owner's lock.
+ */
 export const acquireOutputLockWith = (
   params: { readonly outputDir: string; readonly inputFile: string },
   hooks: OutputLockAcquisitionHooks

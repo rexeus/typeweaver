@@ -6,9 +6,6 @@ import { resolveWorkspaceEffect } from "./effectWorkspaceResolution.js";
 import type { DoctorCheck } from "../reports/DoctorReport.js";
 import type { WorkspaceEffectDeclaration } from "./effectWorkspaceResolution.js";
 
-export { resolveWorkspaceEffect };
-export type { WorkspaceEffectDeclaration };
-
 /**
  * The exact Effect runtime shared by the CLI programmatic API, generator,
  * first-party plugins, and adapter.

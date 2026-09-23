@@ -188,4 +188,3 @@ export function hasUnrepresentableAdditionalProperties(
     schema["additionalProperties"] !== false
   );
 }
-export { isJsonSchema };

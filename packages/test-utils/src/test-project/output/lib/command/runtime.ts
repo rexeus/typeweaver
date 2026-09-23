@@ -12,8 +12,6 @@ import { resolveSecurity } from "./commandSecurity.js";
 import type { ParsedArguments } from "./commandArguments.js";
 import type { GeneratedCommandIo, GeneratedCommandProgram } from "./types.js";
 
-export { COMMAND_EXIT_CODES };
-
 const runCommand = async (
   program: GeneratedCommandProgram,
   parsed: ParsedArguments,
