@@ -23,7 +23,7 @@ import { TemplateRenderer } from "../services/TemplateRenderer.js";
  * `FileSystem` service from `effect` (platform-agnostic — no
  * `@effect/platform-node` dependency here). Consumers provide it at the
  * edge: a Node.js programmatic entrypoint supplies `NodeFileSystem.layer`
- * from `@effect/platform-node`; tests supply `InMemoryFileSystem` (or
+ * from `@effect/platform-node-shared`; tests supply `InMemoryFileSystem` (or
  * `FileSystem.layerNoop`).
  *
  * Platform bindings (FileSystem, Path) and CLI-only services (Formatter,

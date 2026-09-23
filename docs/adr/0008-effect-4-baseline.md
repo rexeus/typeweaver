@@ -39,6 +39,14 @@ generic guides as archived conceptual material.
    `missingStarInYieldEffectGen`, and unused directives remain blocking even at those paths; unknown
    future warning names fail closed. The retained inline exception allowlist is currently empty, and
    stale directives fail closed. Run `pnpm effect:diagnostics` locally.
+5. **Additional Effect packages are an exact, minimal allowlist.** `acceptedEffectDependencies` in
+   `config/effect-baseline.json` names every `@effect/*` dependency or devDependency a workspace
+   package may declare, each pinned to `4.0.0-rc.116`; `@effect/tsgo` is pinned separately. The CLI
+   takes its Node platform layers (`NodeFileSystem`, `NodePath`, `NodeStdio`, `NodeTerminal`,
+   `NodeChildProcessSpawner`) and `NodeRuntime.runMain` from `@effect/platform-node-shared`. It does
+   not depend on `@effect/platform-node`, which re-exports the same modules but declares a required
+   `redis` peer and would install a Redis client that the CLI never uses. The packed-consumer gate
+   fails if a fresh install contains `@effect/platform-node` or `redis`.
 
 ### Effect 3 → native Effect 4.0.0-rc.116
 

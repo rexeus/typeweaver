@@ -8,7 +8,7 @@ import {
   PluginRegistry,
 } from "@rexeus/typeweaver-gen";
 import type { GeneratorContext, Plugin } from "@rexeus/typeweaver-gen";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { assert, describe, it } from "@effect/vitest";
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Ref } from "effect";
 import {

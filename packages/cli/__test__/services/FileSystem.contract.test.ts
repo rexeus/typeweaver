@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { assert, describe, it } from "@effect/vitest";
 import { Cause, Effect, Exit, FileSystem, Layer, Option } from "effect";
 import { makeInMemoryFileSystem } from "test-utils/src/effect/index.js";

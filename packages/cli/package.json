@@ -77,7 +77,6 @@
   },
   "homepage": "https://github.com/rexeus/typeweaver#readme",
   "dependencies": {
-    "@effect/platform-node": "4.0.0-rc.116",
     "@effect/platform-node-shared": "4.0.0-rc.116",
     "@rexeus/typeweaver-aws-cdk": "workspace:^",
     "@rexeus/typeweaver-clients": "workspace:^",
@@ -93,7 +92,6 @@
     "effect": "4.0.0-rc.116",
     "oxc-transform": "^0.141.0",
     "rolldown": "^1.2.0",
-    "redis": "^5.0.0",
     "semver": "7.7.4",
     "zod": "^4.4.3"
   },

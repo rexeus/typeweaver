@@ -5,7 +5,7 @@
       "source": "effect-ts/skills",
       "sourceType": "github",
       "skillPath": "skills/effect-ts/SKILL.md",
-      "computedHash": "8a7e6f2253c8f1194de8155d91e96d1e2fae5528252221786c67dc4c798bdbfd"
+      "computedHash": "1c90841bb3bab9803fbd0ab71ba4f3e29f300f7789cd8e3e062a488b5d8f98f2"
     },
     "turborepo": {
       "source": "vercel/turborepo",

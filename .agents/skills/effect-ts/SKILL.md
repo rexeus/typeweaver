@@ -134,7 +134,8 @@ This repository deliberately targets the exact `effect@4.0.0-rc.116` release can
 Choose packages based on the runtime and the work being done.
 
 - core library and most unstable modules: `effect@4.0.0-rc.116`
-- Node.js runtime needs: `@effect/platform-node@4.0.0-rc.116`
+- Node.js platform layers and `runMain`: `@effect/platform-node-shared@4.0.0-rc.116`; do not add
+  `@effect/platform-node`, which re-exports the same modules but requires a `redis` peer
 - Vitest integration needs: `@effect/vitest@4.0.0-rc.116`
 - CLI programs: the `effect/unstable/cli` module inside `effect`
 

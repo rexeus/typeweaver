@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { HttpStatusCode } from "@rexeus/typeweaver-core";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { Cause, Effect, Result, Exit, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { SpecBundleOutputMissingError } from "../src/services/errors/specErrors.js";

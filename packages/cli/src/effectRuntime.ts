@@ -1,5 +1,5 @@
 import { MainLayer } from "@rexeus/typeweaver-gen";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { Layer, ManagedRuntime, References } from "effect";
 import { CliLoggerLayer, VerboseCliLoggerLayer } from "./cliLogger.js";
 import {

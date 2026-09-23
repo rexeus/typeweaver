@@ -242,7 +242,9 @@ CLI. See `packages/cli/src/effectRuntime.ts` and
   - `MainLayer` (from `@rexeus/typeweaver-gen`) now requires Effect 4's platform-agnostic
     `FileSystem` service from `effect` — `ContextBuilder` captures it for the Effect-native plugin
     context surface. At a Node.js programmatic edge, provide `NodeFileSystem.layer` from
-    `@effect/platform-node`; tests can provide an in-memory or no-op `FileSystem` layer beneath it.
+    `@effect/platform-node-shared` (the TypeWeaver CLI uses this package; `@effect/platform-node`
+    re-exports the same layer but also requires a `redis` peer); tests can provide an in-memory or
+    no-op `FileSystem` layer beneath it.
 - Errors are now `Data.TaggedError` instances throughout. Inspect the `_tag` field for typed
   branching (`UnsafeGeneratedPathError`, `PluginExecutionError`, `SpecBundleError`, etc.).
 - Fiber interruption waits for a running Rolldown bundle to settle before the generator releases its

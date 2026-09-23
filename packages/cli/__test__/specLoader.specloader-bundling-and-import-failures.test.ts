@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { Effect, Result, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import {

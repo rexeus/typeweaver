@@ -20,9 +20,9 @@ defects without leaking a FiberFailure trace.
   not suppress domain errors, defects, or causes that still need an application message.
 - CLI logging remains one logger boundary. Normal messages use stdout and warning/error messages use
   stderr; `--verbose` selects the debug-capable layer.
-- Node startup uses the Effect 4 platform-node runtime layers and disables the platform's duplicate
-  error reporter. No `@effect/cli` or `@effect/platform` package API is part of the current
-  contract.
+- Node startup uses the Effect 4 `@effect/platform-node-shared` runtime and layers and disables the
+  platform's duplicate error reporter. No `@effect/cli` or `@effect/platform` package API is part of
+  the current contract.
 
 ## Consequences
 

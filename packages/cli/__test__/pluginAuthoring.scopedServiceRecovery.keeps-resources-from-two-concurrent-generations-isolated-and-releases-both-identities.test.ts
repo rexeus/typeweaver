@@ -9,7 +9,7 @@ import {
   defineScopedPlugin,
 } from "@rexeus/typeweaver-gen";
 import type { Plugin } from "@rexeus/typeweaver-gen";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { assert, it } from "@effect/vitest";
 import { Context, Data, Deferred, Effect, Exit, Fiber, Layer } from "effect";
 import {

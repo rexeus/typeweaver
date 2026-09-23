@@ -21,8 +21,8 @@ const hasDirectEffectImport = directory =>
     )
   );
 
-/** @param {string} fixtureRoot @param {string} packageName @returns {string} */
-export const installedPackageJsonPath = (fixtureRoot, packageName) => {
+/** @param {string} fixtureRoot @param {string} packageName @returns {string[]} */
+export const installedPackageJsonPaths = (fixtureRoot, packageName) => {
   const relativePackagePath = path.join(
     "node_modules",
     ...packageName.split("/"),
@@ -39,9 +39,14 @@ export const installedPackageJsonPath = (fixtureRoot, packageName) => {
       )
       .filter(existsSync),
   ];
-  const realCandidates = Array.from(
+  return Array.from(
     new Set(candidates.map(candidate => realpathSync(candidate)))
   );
+};
+
+/** @param {string} fixtureRoot @param {string} packageName @returns {string} */
+export const installedPackageJsonPath = (fixtureRoot, packageName) => {
+  const realCandidates = installedPackageJsonPaths(fixtureRoot, packageName);
   assert.equal(
     realCandidates.length,
     1,

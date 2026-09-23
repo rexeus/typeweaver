@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { layer as nodeFileSystemLayer } from "@effect/platform-node/NodeFileSystem";
+import { layer as nodeFileSystemLayer } from "@effect/platform-node-shared/NodeFileSystem";
 import { Cause, Deferred, Effect, Exit, FileSystem, Fiber } from "effect";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
