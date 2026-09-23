@@ -4,7 +4,7 @@ export const expectedRootRules = {
   "eslint/max-depth": ["error", { max: 3 }],
   "eslint/max-lines": [
     "error",
-    { max: 250, skipBlankLines: true, skipComments: false },
+    { max: 250, skipBlankLines: true, skipComments: true },
   ],
   "eslint/max-lines-per-function": [
     "error",
@@ -76,7 +76,7 @@ export const expectedTestFiles = [
 export const expectedTestStructuralRelaxations = {
   "eslint/max-lines": [
     "error",
-    { max: 350, skipBlankLines: true, skipComments: false },
+    { max: 350, skipBlankLines: true, skipComments: true },
   ],
   "eslint/max-lines-per-function": "off",
   "eslint/max-nested-callbacks": "off",

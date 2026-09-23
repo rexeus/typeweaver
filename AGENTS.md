@@ -18,8 +18,8 @@ notes, but it is gitignored and never part of the published repository.
   [`packages/tsconfig/README.md`](./packages/tsconfig/README.md).
 - Oxlint enforces lint, type-aware semantic safety, and maintainability rules. `pnpm lint` is
   warning-free and requires `exactOptionalPropertyTypes`-clean code. Authored source has a 250-line
-  file budget; classified tests have a 350-line file budget. Both count comments and skip blank
-  lines.
+  file budget; classified tests have a 350-line file budget. Both count code lines only and skip
+  comment-only and blank lines, so never delete a rationale comment to fit the budget.
 - Oxfmt formats source and documentation.
 - Vitest runs unit, integration, and generation tests.
 

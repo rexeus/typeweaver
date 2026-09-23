@@ -62,25 +62,27 @@ and `import/no-unassigned-import`.
 
 These are the enforced values in `.oxlintrc.json`. No override may loosen them:
 
-| Rule                            | Configuration                                             |
-| ------------------------------- | --------------------------------------------------------- |
-| `eslint/complexity`             | `max: 10`, `variant: "classic"`                           |
-| `eslint/max-depth`              | `max: 3`                                                  |
-| `eslint/max-lines`              | `max: 250`, `skipBlankLines: true`, `skipComments: false` |
-| `eslint/max-lines-per-function` | `max: 60`, `skipBlankLines: true`, `skipComments: true`   |
-| `eslint/max-nested-callbacks`   | `max: 3`                                                  |
-| `eslint/max-params`             | `max: 4`, `countThis: "except-void"`                      |
-| `eslint/max-statements`         | `max: 30`                                                 |
-| `sonarjs/cognitive-complexity`  | `12`                                                      |
-| `sonarjs/expression-complexity` | `max: 6`                                                  |
-| `sonarjs/no-nested-switch`      | `error`                                                   |
+| Rule                            | Configuration                                            |
+| ------------------------------- | -------------------------------------------------------- |
+| `eslint/complexity`             | `max: 10`, `variant: "classic"`                          |
+| `eslint/max-depth`              | `max: 3`                                                 |
+| `eslint/max-lines`              | `max: 250`, `skipBlankLines: true`, `skipComments: true` |
+| `eslint/max-lines-per-function` | `max: 60`, `skipBlankLines: true`, `skipComments: true`  |
+| `eslint/max-nested-callbacks`   | `max: 3`                                                 |
+| `eslint/max-params`             | `max: 4`, `countThis: "except-void"`                     |
+| `eslint/max-statements`         | `max: 30`                                                |
+| `sonarjs/cognitive-complexity`  | `12`                                                     |
+| `sonarjs/expression-complexity` | `max: 6`                                                 |
+| `sonarjs/no-nested-switch`      | `error`                                                  |
 
-Authored tests use a dedicated `max: 350`, `skipBlankLines: true`, `skipComments: false`
-`eslint/max-lines` override. The test container profile relaxes only `eslint/max-lines-per-function`
-and `eslint/max-nested-callbacks`; it does not disable the file-size rule. Package test files
-receive a second, type-aware overlay with every TypeScript safety rule. Cognitive, expression, and
-cyclomatic complexity, statement, parameter, depth, import, and every type-aware safety rule still
-apply to package tests.
+Authored tests use a dedicated `max: 350`, `skipBlankLines: true`, `skipComments: true`
+`eslint/max-lines` override. Both file-size budgets count code lines only: comment-only and blank
+lines are skipped, so rationale, invariant, and public API comments never compete with code for the
+budget. The test container profile relaxes only `eslint/max-lines-per-function` and
+`eslint/max-nested-callbacks`; it does not disable the file-size rule. Package test files receive a
+second, type-aware overlay with every TypeScript safety rule. Cognitive, expression, and cyclomatic
+complexity, statement, parameter, depth, import, and every type-aware safety rule still apply to
+package tests.
 
 The file-size test classification is exact:
 
@@ -121,8 +123,8 @@ from the package TypeScript semantic overlays and has no generated-output except
 ## Suppression governance
 
 Authored `oxlint-disable`/`eslint-disable` directives are an exact allowlist. Any addition, removal,
-or move requires a reviewed contract change in `scripts/test-maintainability-lint.mjs`, and any
-directive not on the list fails the gate:
+or move requires a reviewed contract change to `allowedDisableDirectives` in
+`scripts/lib/maintainability-policy.mjs`, and any directive not on the list fails the gate:
 
 | File                                         | Directive                                   | Reason                                                              |
 | -------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |

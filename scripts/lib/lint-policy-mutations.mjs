@@ -42,7 +42,7 @@ export const mutationCases = [
     mutate: config => {
       config.rules["eslint/max-lines"] = [
         "error",
-        { max: 251, skipBlankLines: true, skipComments: false },
+        { max: 251, skipBlankLines: true, skipComments: true },
       ];
     },
   },
@@ -56,12 +56,9 @@ export const mutationCases = [
     },
   },
   {
-    label: "root comments excluded from structural threshold",
+    label: "root structural threshold disabled",
     mutate: config => {
-      config.rules["eslint/max-lines"] = [
-        "error",
-        { max: 250, skipBlankLines: true, skipComments: true },
-      ];
+      config.rules["eslint/max-lines"] = "off";
     },
   },
   {
@@ -75,15 +72,15 @@ export const mutationCases = [
     mutate: config => {
       overrideFor(config, expectedTestFiles).rules["eslint/max-lines"] = [
         "error",
-        { max: 351, skipBlankLines: true, skipComments: false },
+        { max: 351, skipBlankLines: true, skipComments: true },
       ];
     },
   },
   {
-    label: "test comments excluded from structural threshold",
+    label: "test structural threshold downgraded",
     mutate: config => {
       overrideFor(config, expectedTestFiles).rules["eslint/max-lines"] = [
-        "error",
+        "warn",
         { max: 350, skipBlankLines: true, skipComments: true },
       ];
     },

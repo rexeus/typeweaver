@@ -1,20 +1,33 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
+const skippedComment = "// Comment-only lines do not count toward max-lines.";
+
 /** @param {string[]} lines */
-const withBlankLines = lines =>
+const withSkippedLines = lines =>
   lines.flatMap((line, index) =>
-    index > 0 && index % 50 === 0 ? [line, ""] : [line]
+    index > 0 && index % 50 === 0 ? ["", skippedComment, line] : [line]
   );
 
-/** @param {number} codeLineCount */
+/**
+ * Emits exactly `codeLineCount` counted lines. The interleaved comment-only and
+ * blank lines push the physical line count past the budget, so a fixture at
+ * the budget passes only while comments and blank lines are skipped.
+ *
+ * @param {number} codeLineCount
+ */
 export const fileLines = codeLineCount =>
-  withBlankLines(
-    Array.from(
-      { length: codeLineCount },
-      (_, index) => `export const value${index} = ${index};`
-    ).concat("// Comments count toward the max-lines budget.")
-  ).join("\n");
+  [
+    "/**",
+    " * File-size probe: only code lines count toward the budget.",
+    " */",
+    ...withSkippedLines(
+      Array.from(
+        { length: codeLineCount },
+        (_, index) => `export const value${index} = ${index};`
+      )
+    ),
+  ].join("\n");
 
 /** @param {number} flatBranchCount */
 export const cognitiveComplexity = flatBranchCount =>
