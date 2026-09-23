@@ -3,10 +3,12 @@ import { z } from "zod";
 import {
   defineDerivedResponse,
   defineResponse,
-  getResponseDefinitionMetadata,
-  isNamedResponseDefinition,
 } from "../../../src/defineResponse.js";
 import { HttpStatusCode } from "../../../src/HttpStatusCode.js";
+import {
+  getResponseDefinitionMetadata,
+  isNamedResponseDefinition,
+} from "../../../src/responseDefinitionMetadata.js";
 
 describe("defineDerivedResponse metadata and lineage", () => {
   test("derived responses expose define-derived-response metadata", () => {

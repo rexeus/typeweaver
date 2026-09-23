@@ -1,12 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
+import { defineResponse } from "../../../src/defineResponse.js";
+import { HttpStatusCode } from "../../../src/HttpStatusCode.js";
 import {
-  defineResponse,
   getResponseDefinitionMetadata,
   isNamedResponseDefinition,
-  responseDefinitionMetadataSymbol,
-} from "../../../src/defineResponse.js";
-import { HttpStatusCode } from "../../../src/HttpStatusCode.js";
+} from "../../../src/responseDefinitionMetadata.js";
+import { responseDefinitionMetadataSymbol } from "../../../src/responseDefinitionTypes.js";
 
 describe("defineResponse authored metadata", () => {
   test("authored responses preserve supplied fields and schema identities", () => {

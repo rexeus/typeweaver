@@ -3,9 +3,9 @@ import { z } from "zod";
 import {
   defineDerivedResponse,
   defineResponse,
-  ResponseDefinitionMergeError,
 } from "../../../src/defineResponse.js";
 import { HttpStatusCode } from "../../../src/HttpStatusCode.js";
+import { ResponseDefinitionMergeError } from "../../../src/responseDefinitionMetadata.js";
 
 describe("defineDerivedResponse body and field merging", () => {
   test("derived responses merge object body schemas across derivation levels", () => {

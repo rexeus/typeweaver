@@ -6,8 +6,8 @@ import { HttpMethod } from "../../src/HttpMethod.js";
 import { HttpStatusCode } from "../../src/HttpStatusCode.js";
 import { validateUniqueResponseNames } from "../../src/validateResponseUniqueness.js";
 import type { OperationDefinition } from "../../src/defineOperation.js";
-import type { ResponseDefinition } from "../../src/defineResponse.js";
 import type { ResourceDefinition } from "../../src/defineSpec.js";
+import type { ResponseDefinition } from "../../src/responseDefinitionTypes.js";
 
 const aResponseNamed = (
   name: string,

@@ -7,7 +7,6 @@ import {
   InvalidSecurityRequirementError,
   UnknownSecuritySchemeError,
 } from "./errors/index.js";
-import { validateAuthorizationHeader } from "./securityAuthorization.js";
 import { validateSecurityScheme } from "./securitySchemeValidation.js";
 import type { NormalizedSecurity } from "./NormalizedSpec.js";
 
@@ -96,4 +95,3 @@ export const resolveSecurity = (
   validateSecurityRequirements(declared, context);
   return { requirements: declared, source };
 };
-export { validateAuthorizationHeader };

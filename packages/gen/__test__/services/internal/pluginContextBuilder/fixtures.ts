@@ -4,15 +4,13 @@ import path from "node:path";
 import { HttpMethod } from "@rexeus/typeweaver-core";
 import { FileSystem } from "effect";
 import { expect } from "vitest";
-import {
-  createPluginContextBuilder,
-  liveSyncAtomicFileSystem,
-} from "../../../../src/services/internal/pluginContextBuilder.js";
+import { createPluginContextBuilder } from "../../../../src/services/internal/pluginContextBuilder.js";
 import {
   livePathSafetyShape,
   liveTemplateRendererShape,
 } from "../../../../src/services/internal/pluginContextEffectIO.js";
-import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextBuilder.js";
+import { liveSyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextFileWriter.js";
+import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextFileWriter.js";
 
 /**
  * Real-deps factory for the sync plugin-context builder: the exact live

@@ -1,4 +1,3 @@
-import { createWarning } from "./warningRules.js";
 import { collectWarnings } from "./warningTraversal.js";
 import type { ZodToJsonSchemaWarning } from "../types.js";
 import type { ZodSchema } from "./zodIntrospection.js";
@@ -12,4 +11,3 @@ export function collectZodWarnings(
   collectWarnings(schema, collector, []);
   return collector.warnings;
 }
-export { createWarning };

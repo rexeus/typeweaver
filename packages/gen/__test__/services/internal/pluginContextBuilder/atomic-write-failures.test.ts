@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { liveSyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextBuilder.js";
+import { liveSyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextFileWriter.js";
 import {
   aBuilder,
   aGeneratedProjectContext,
@@ -12,7 +12,7 @@ import {
   nativeGeneratedFilePath,
   removeTempDirs,
 } from "./fixtures.js";
-import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextBuilder.js";
+import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextFileWriter.js";
 
 const coordinationMarkerFile = ".typeweaver-coordination";
 

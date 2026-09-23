@@ -4,10 +4,10 @@ import {
   findReservedPathParameter,
   ReservedPathParameterError,
 } from "./ReservedPathParameter.js";
-import type { ResponseDefinition } from "./defineResponse.js";
 import type { HttpMethod } from "./HttpMethod.js";
 import type { HttpRequestBoundaryConstraint } from "./HttpRequestBoundary.js";
 import type { RequestDefinition } from "./RequestDefinition.js";
+import type { ResponseDefinition } from "./responseDefinitionTypes.js";
 import type { SecurityRequirements } from "./SecurityDefinition.js";
 
 type LowercaseLetter =

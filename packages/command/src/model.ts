@@ -6,21 +6,7 @@ import {
   buildSecurityModel,
   unsupportedTargets,
 } from "./modelHelpers.js";
-import type {
-  CommandInputModel,
-  CommandInputTarget,
-  CommandOperationModel,
-  CommandSecurityModel,
-  CommandSecuritySchemeModel,
-} from "./modelTypes.js";
-
-export type {
-  CommandInputModel,
-  CommandInputTarget,
-  CommandOperationModel,
-  CommandSecurityModel,
-  CommandSecuritySchemeModel,
-};
+import type { CommandOperationModel } from "./modelTypes.js";
 
 export const buildCommandOperationModels = (
   spec: NormalizedSpec

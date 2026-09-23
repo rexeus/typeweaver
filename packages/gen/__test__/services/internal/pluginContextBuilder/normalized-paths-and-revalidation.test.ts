@@ -2,11 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { UnsafeGeneratedPathError } from "../../../../src/errors/UnsafeGeneratedPathError.js";
-import {
-  createPluginContextBuilder,
-  liveSyncAtomicFileSystem,
-} from "../../../../src/services/internal/pluginContextBuilder.js";
+import { createPluginContextBuilder } from "../../../../src/services/internal/pluginContextBuilder.js";
 import { livePathSafetyShape } from "../../../../src/services/internal/pluginContextEffectIO.js";
+import { liveSyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextFileWriter.js";
 import {
   aBuilder,
   aGeneratedProjectContext,
@@ -18,7 +16,7 @@ import {
   realPluginContextBuilderDeps,
   removeTempDirs,
 } from "./fixtures.js";
-import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextBuilder.js";
+import type { SyncAtomicFileSystem } from "../../../../src/services/internal/pluginContextFileWriter.js";
 
 afterEach(removeTempDirs);
 

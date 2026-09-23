@@ -23,7 +23,6 @@ import type {
   HeaderAppearance,
   VariantHeaders,
 } from "./responseHeaderMergeHelpers.js";
-export { stableStringifyJsonSchema };
 
 export type ResponseHeaderMergeVariant = {
   readonly response: Pick<NormalizedResponse, "header">;

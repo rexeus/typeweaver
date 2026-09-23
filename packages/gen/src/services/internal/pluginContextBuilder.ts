@@ -21,18 +21,7 @@ import type {
   PluginContextBuilderDeps,
   PluginContextParams,
 } from "./pluginContextBuilderTypes.js";
-import type {
-  GeneratedFilesTracker,
-  SyncAtomicFileSystem,
-} from "./pluginContextFileWriter.js";
-
-export type {
-  GeneratorContextDeps,
-  GeneratorContextParams,
-  PluginContextParams,
-};
-export type { SyncAtomicFileSystem };
-export { liveSyncAtomicFileSystem };
+import type { GeneratedFilesTracker } from "./pluginContextFileWriter.js";
 
 export type PluginContextBuilderApi = {
   readonly createPluginContext: (params: PluginContextParams) => PluginContext;
