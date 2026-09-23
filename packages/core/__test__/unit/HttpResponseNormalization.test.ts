@@ -6,6 +6,7 @@ import {
   toHttpHeader,
   toHttpResponse,
 } from "../../src/index.js";
+import { aNullPrototypeRecordWith } from "../helpers/nullPrototypeRecord.js";
 import type { IHttpResponse, ITypedHttpResponse } from "../../src/index.js";
 
 const aTypedResponseWith = (
@@ -16,11 +17,6 @@ const aTypedResponseWith = (
   body: { id: "todo-1" },
   ...overrides,
 });
-
-const aNullPrototypeRecordWith = (
-  properties: Record<string, unknown>
-): Record<string, unknown> =>
-  Object.assign(Object.create(null) as Record<string, unknown>, properties);
 
 describe("HTTP response normalization: typed response detection", () => {
   test.each([
