@@ -33,6 +33,24 @@ describe("FetchApiAdapter raw request boundary", () => {
 
     expect(result.header).toMatchObject({ "x-empty": "" });
   });
+
+  test("normalizes the request method to an HTTP method", async () => {
+    const adapter = new FetchApiAdapter();
+    const request = new Request(TEST_URL, { method: "patch" });
+
+    const result = await adapter.toRequest(request);
+
+    expect(result.method).toBe("PATCH");
+  });
+
+  test("rejects request methods outside the supported HTTP methods", async () => {
+    const adapter = new FetchApiAdapter();
+    const request = new Request(TEST_URL, { method: "PROPFIND" });
+
+    await expect(adapter.toRequest(request)).rejects.toThrow(
+      new TypeError("Unsupported HTTP method: PROPFIND")
+    );
+  });
 });
 
 describe("FetchApiAdapter request body boundary", () => {
