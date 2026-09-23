@@ -2,14 +2,13 @@ import fs from "node:fs";
 import { Effect } from "effect";
 import { OutputLockError } from "../../errors/index.js";
 import { isExpectedNodeSystemError } from "./nodeFsErrors.js";
+import { readOutputLockInfo } from "./outputLockInfo.js";
+import { lockFencePath, sameLockInfo } from "./outputLockOperations.js";
 import {
   forgetFailedOutputLockRelease,
-  lockFencePath,
   rememberFailedOutputLockRelease,
-  sameLockInfo,
-} from "./outputLockAcquisition.js";
-import { readOutputLockInfo } from "./outputLockInfo.js";
-import type { OutputLock } from "./outputLockAcquisition.js";
+} from "./outputLockState.js";
+import type { OutputLock } from "./outputLockOperations.js";
 
 type OutputLockDetachStatus =
   | { readonly _tag: "Detached"; readonly fencePath: string }

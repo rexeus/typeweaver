@@ -1,16 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import {
-  assertSafeCleanTarget,
-  assertSafeCleanTargetWith,
-} from "../../../src/services/cleanTargetGuard.js";
+import { assertSafeCleanTarget } from "../../../src/services/cleanTargetGuard.js";
+import { assertSafeCleanTargetWith } from "../../../src/services/cleanTargetValidation.js";
 import {
   captureUnsafeCleanTargetError,
   createTempDir,
   removeTempDirs,
 } from "./fixtures.js";
-import type { CleanTargetFs } from "../../../src/services/cleanTargetGuard.js";
+import type { CleanTargetFs } from "../../../src/services/cleanTargetTypes.js";
 
 afterEach(removeTempDirs);
 

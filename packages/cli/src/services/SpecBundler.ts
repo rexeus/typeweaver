@@ -9,34 +9,17 @@ import {
   makeBuildOptions,
   publishBundle,
   runRolldownBuild,
-  isExternalModule,
 } from "./specBuild.js";
 import {
-  createWrapperImportSpecifier,
-  createWrapperImportSpecifierWith,
   makeBundlePaths,
   prepareBundleDirectory,
   writeBundleWrapper,
 } from "./specWrapper.js";
 import type {
   BundleOperation,
-  FileUrlConverter,
-  FileUrlLike,
   SpecBundlerConfig,
   SpecBundlerDeps,
 } from "./specBundlerTypes.js";
-
-export type {
-  FileUrlConverter,
-  FileUrlLike,
-  SpecBundlerConfig,
-  SpecBundlerDeps,
-};
-export {
-  createWrapperImportSpecifier,
-  createWrapperImportSpecifierWith,
-  isExternalModule,
-};
 
 const bundleSpec = Effect.fn(function* (
   fileSystem: FileSystem.FileSystem,

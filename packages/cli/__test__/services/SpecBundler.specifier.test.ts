@@ -1,9 +1,10 @@
 import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
+import { isExternalModule } from "../../src/services/specBuild.js";
 import {
+  createWrapperImportSpecifier,
   createWrapperImportSpecifierWith,
-  isExternalModule,
-} from "../../src/services/SpecBundler.js";
+} from "../../src/services/specWrapper.js";
 
 const identityRealpath = (filePath: string): string => filePath;
 
@@ -53,6 +54,44 @@ describe("SpecBundler wrapper import specifier", () => {
     );
 
     expect(specifier).toBe("./sub/index.ts");
+  });
+});
+
+describe("SpecBundler relative wrapper import specifiers", () => {
+  test("creates a relative wrapper import specifier for posix paths", () => {
+    expect(
+      createWrapperImportSpecifier(
+        "/tmp/typeweaver/spec-entrypoint.ts",
+        "/tmp/typeweaver/spec.ts"
+      )
+    ).toBe("./spec.ts");
+  });
+
+  test("creates a relative wrapper import specifier for windows paths", () => {
+    expect(
+      createWrapperImportSpecifier(
+        "C:\\project\\.typeweaver\\spec-entrypoint.ts",
+        "C:\\project\\specs\\spec.ts"
+      )
+    ).toBe("../specs/spec.ts");
+  });
+
+  test("creates a relative wrapper import specifier for UNC windows paths", () => {
+    expect(
+      createWrapperImportSpecifier(
+        "\\\\server\\share\\project\\.typeweaver\\spec-entrypoint.ts",
+        "\\\\server\\share\\project\\specs\\spec.ts"
+      )
+    ).toBe("../specs/spec.ts");
+  });
+
+  test("preserves spaces in wrapper import specifiers", () => {
+    expect(
+      createWrapperImportSpecifier(
+        "/tmp/typeweaver/spec loader/spec-entrypoint.ts",
+        "/tmp/typeweaver/spec source/spec.ts"
+      )
+    ).toBe("../spec source/spec.ts");
   });
 });
 

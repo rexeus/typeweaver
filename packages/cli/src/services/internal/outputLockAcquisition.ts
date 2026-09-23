@@ -14,23 +14,11 @@ import {
   LEGACY_OUTPUT_LOCK_DIRECTORY,
   outputLockDirectory,
 } from "./outputCoordinationArtifact.js";
-import {
-  acquireOrReclaimOutputLock,
-  lockFencePath,
-  sameLockInfo,
-} from "./outputLockOperations.js";
-import {
-  forgetFailedOutputLockRelease,
-  rememberFailedOutputLockRelease,
-} from "./outputLockState.js";
+import { acquireOrReclaimOutputLock } from "./outputLockOperations.js";
 import type {
   OutputLock,
   OutputLockAcquisitionHooks,
 } from "./outputLockOperations.js";
-
-export type { OutputLock, OutputLockAcquisitionHooks };
-export { lockFencePath, sameLockInfo };
-export { forgetFailedOutputLockRelease, rememberFailedOutputLockRelease };
 
 const NO_OUTPUT_LOCK_HOOKS: OutputLockAcquisitionHooks = {
   onLockDirectoryCreated: () => undefined,

@@ -6,19 +6,12 @@ import { Cause, Effect, Result, Exit, Layer } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { SpecBundleOutputMissingError } from "../../src/services/errors/specErrors.js";
 import { isSpecDefinition } from "../../src/services/internal/specGuards.js";
-import {
-  createWrapperImportSpecifier,
-  SpecBundler,
-} from "../../src/services/SpecBundler.js";
+import { SpecBundler } from "../../src/services/SpecBundler.js";
 import {
   cleanupSpecLoaderProjects,
   createTempProject,
   writeSpecEntrypoint,
 } from "./fixtures.js";
-import type {
-  SpecBundlerConfig,
-  SpecBundlerDeps,
-} from "../../src/services/SpecBundler.js";
 
 const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
   cause.reasons.filter(Cause.isDieReason).map(reason => reason.defect);
@@ -35,11 +28,10 @@ const SpecBundlerLayer = SpecBundler.Default.pipe(
 );
 
 const bundle = async (
-  config: SpecBundlerConfig,
-  deps?: SpecBundlerDeps
+  ...args: Parameters<typeof SpecBundler.bundle>
 ): Promise<string> => {
   const result = await Effect.runPromise(
-    Effect.result(SpecBundler.bundle(config, deps)).pipe(
+    Effect.result(SpecBundler.bundle(...args)).pipe(
       Effect.provide(SpecBundlerLayer)
     )
   );
@@ -204,44 +196,6 @@ describe("SpecLoader structural guards", () => {
 
   test.each(invalidSpecDefinitions)("rejects $scenario", ({ value }) => {
     expect(isSpecDefinition(value)).toBe(false);
-  });
-});
-
-describe("SpecLoader wrapper import specifiers", () => {
-  test("creates a relative wrapper import specifier for posix paths", () => {
-    expect(
-      createWrapperImportSpecifier(
-        "/tmp/typeweaver/spec-entrypoint.ts",
-        "/tmp/typeweaver/spec.ts"
-      )
-    ).toBe("./spec.ts");
-  });
-
-  test("creates a relative wrapper import specifier for windows paths", () => {
-    expect(
-      createWrapperImportSpecifier(
-        "C:\\project\\.typeweaver\\spec-entrypoint.ts",
-        "C:\\project\\specs\\spec.ts"
-      )
-    ).toBe("../specs/spec.ts");
-  });
-
-  test("creates a relative wrapper import specifier for UNC windows paths", () => {
-    expect(
-      createWrapperImportSpecifier(
-        "\\\\server\\share\\project\\.typeweaver\\spec-entrypoint.ts",
-        "\\\\server\\share\\project\\specs\\spec.ts"
-      )
-    ).toBe("../specs/spec.ts");
-  });
-
-  test("preserves spaces in wrapper import specifiers", () => {
-    expect(
-      createWrapperImportSpecifier(
-        "/tmp/typeweaver/spec loader/spec-entrypoint.ts",
-        "/tmp/typeweaver/spec source/spec.ts"
-      )
-    ).toBe("../spec source/spec.ts");
   });
 });
 

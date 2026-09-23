@@ -9,9 +9,6 @@ import { fileSystemError } from "./projectPublishingTypes.js";
 import type { ProjectInitFailure } from "../../errors/ProjectInitError.js";
 import type { PlannedInitFile } from "./projectPublishingTypes.js";
 
-export type { PlannedInitFile };
-export { fileSystemError };
-
 export const executePlan = (
   fileSystem: FileSystem.FileSystem,
   targetDir: string,

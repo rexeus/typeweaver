@@ -11,8 +11,6 @@ import { loadConfiguredPlugin } from "./pluginResolution.js";
 import type { PluginResolutionStrategy } from "./pluginResolution.js";
 import type { PluginLoadResult } from "./pluginShape.js";
 
-export type { PluginResolutionStrategy };
-
 export type LoadParams = {
   readonly registry: PluginRegistryInstance;
   readonly requiredPlugins: readonly Plugin[];

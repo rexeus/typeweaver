@@ -6,12 +6,10 @@ import {
   REQUIRED_EFFECT_VERSION,
   classifyConfiguredPlugins,
   classifyWorkspaceEffectCompatibility,
-  resolveWorkspaceEffect,
 } from "../../src/services/effectCompatibility.js";
-import type {
-  WorkspaceEffectCompatibilityFacts,
-  WorkspaceEffectDeclaration,
-} from "../../src/services/effectCompatibility.js";
+import { resolveWorkspaceEffect } from "../../src/services/effectWorkspaceResolution.js";
+import type { WorkspaceEffectCompatibilityFacts } from "../../src/services/effectCompatibility.js";
+import type { WorkspaceEffectDeclaration } from "../../src/services/effectWorkspaceResolution.js";
 
 const resolved = (
   version: string,

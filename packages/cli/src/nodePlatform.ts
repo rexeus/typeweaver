@@ -1,6 +1,5 @@
 import { layer as nodeChildProcessSpawnerLayer } from "@effect/platform-node-shared/NodeChildProcessSpawner";
 import { layer as nodePathLayer } from "@effect/platform-node-shared/NodePath";
-import { runMain as runNodeMain } from "@effect/platform-node-shared/NodeRuntime";
 import { layer as nodeStdioLayer } from "@effect/platform-node-shared/NodeStdio";
 import { layer as nodeTerminalLayer } from "@effect/platform-node-shared/NodeTerminal";
 import { Layer } from "effect";
@@ -15,5 +14,3 @@ export const nodePlatformLayer = Layer.mergeAll(
   nodeStdioLayer,
   nodeChildProcessSpawnerWithPathLayer
 );
-
-export { runNodeMain };

@@ -9,7 +9,7 @@ import {
   releaseOutputLockStrict,
 } from "../../src/services/generatorIO.js";
 import { outputLockDirectory } from "../../src/services/internal/outputCoordinationArtifact.js";
-import type { CleanTargetFs } from "../../src/services/cleanTargetGuard.js";
+import type { CleanTargetFs } from "../../src/services/cleanTargetTypes.js";
 import type { OutputLock } from "../../src/services/generatorIO.js";
 
 const causeDefects = (cause: Cause.Cause<unknown>): ReadonlyArray<unknown> =>
