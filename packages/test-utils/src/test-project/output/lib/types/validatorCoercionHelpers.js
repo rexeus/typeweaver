@@ -34,8 +34,9 @@ function canonicalHeaderRecordKey(rawKey, keyType) {
   return matches.size === 1 ? ([...matches][0] ?? rawKey) : rawKey;
 }
 /**
- * Splits comma-separated header strings into arrays per RFC 7230. Only
- * applies to fields where the schema expects an array type.
+ * Splits comma-separated header strings into arrays per RFC 7230.
+ * Only applies to fields where the schema expects an array type.
+ * Values that are already arrays pass through unchanged.
  */
 export function splitCommaDelimitedValues(header, shape) {
   const schemaMap = analyzeSchema(shape, false);
@@ -57,8 +58,9 @@ export function splitCommaDelimitedValues(header, shape) {
   return result;
 }
 /**
- * Adds a value to the coerced object, preserving all values as arrays when
- * duplicate keys collide.
+ * Adds a value to the coerced object, handling collisions when multiple
+ * values exist for the same key (e.g., duplicate headers with different
+ * casing). Preserves all values as arrays when collisions occur.
  */
 export function addValueToCoerced(coerced, key, value, expectsArray) {
   const existing = getOwnValue(coerced, key);
@@ -70,13 +72,21 @@ export function addValueToCoerced(coerced, key, value, expectsArray) {
   const existingArray = Array.isArray(existing) ? existing : [existing];
   const newArray = Array.isArray(newValue) ? newValue : [newValue];
   const merged = [...existingArray, ...newArray];
+  // If schema expects a single value but we have multiple, preserve as array
+  // to avoid data loss (validation will catch this later)
   setOwnValue(coerced, key, expectsArray || merged.length > 1 ? merged : merged[0]);
 }
-/** Reads an own property so dynamic keys cannot use inherited values. */
+/**
+ * Reads an own property only. Dynamic record/header keys such as
+ * `constructor` or `toString` must not collide with inherited values.
+ */
 function getOwnValue(source, key) {
   return Object.hasOwn(source, key) ? source[key] : undefined;
 }
-/** Writes an own enumerable property without treating `__proto__` specially. */
+/**
+ * Writes an own enumerable data property. Dynamic keys such as `__proto__`
+ * become ordinary keys rather than mutating the object prototype.
+ */
 export function setOwnValue(target, key, value) {
   Object.defineProperty(target, key, {
     value,
@@ -85,13 +95,21 @@ export function setOwnValue(target, key, value) {
     configurable: true,
   });
 }
-/** Aligns scalar and array values with the schema's expected cardinality. */
+/**
+ * Coerces a value's structure to match schema expectations.
+ * Wraps single values in arrays when schema expects array type,
+ * unwraps single-element arrays when schema expects single value.
+ */
 function coerceValueStructure(value, expectsArray) {
   if (expectsArray && !Array.isArray(value)) return [value];
   if (!expectsArray && Array.isArray(value) && value.length === 1) return value[0];
   return value;
 }
-/** Restores schema-defined casing after case-insensitive coercion. */
+/**
+ * Maps normalized (lowercase) keys back to their original casing as defined
+ * in the schema. Used for case-insensitive matching where the output should
+ * preserve schema-defined casing.
+ */
 export function mapToOriginalKeys(coerced, schemaMap) {
   const withOriginalKeys = Object.create(null);
   for (const [key, value] of Object.entries(coerced)) {

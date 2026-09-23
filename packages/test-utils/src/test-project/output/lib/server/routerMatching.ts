@@ -5,6 +5,16 @@ import type {
   SegmentToken,
 } from "./routerInternals.js";
 
+/**
+ * Recursively traverse the radix tree to find a matching node.
+ *
+ * Static children are tried first (exact match). Dynamic children are then
+ * tried most-specific-first (longer literal text wins), so an embedded
+ * pattern such as `:fileId.:format` is preferred over a bare `:fileId`
+ * fallback. Captured params are removed again when a branch backtracks.
+ *
+ * Path parameters are URL-decoded during extraction.
+ */
 export function traverse(
   node: RadixNode,
   segments: string[],
@@ -48,6 +58,11 @@ function sortedDynamicChildren(node: RadixNode): DynamicSegmentChild[] {
   );
 }
 
+/**
+ * Matches one request segment against a parsed segment pattern, returning the
+ * captured (and URL-decoded) placeholder values, or `undefined` when the
+ * segment does not fit.
+ */
 function matchSegment(
   pattern: SegmentPattern,
   segment: string,
@@ -91,6 +106,15 @@ function matchParamToken(
   };
 }
 
+/**
+ * Decodes a URL-encoded path segment while guarding against path traversal.
+ *
+ * Encoded dot-segments like `%2e%2e` would decode to `..`, which could
+ * enable directory traversal if a downstream handler builds file paths
+ * from params. Returning the raw segment neutralises this vector; the same
+ * applies to `.` and to encoded `/` or `\` separators, and a malformed escape
+ * sequence also leaves the segment raw.
+ */
 function decodePathSegment(segment: string): string {
   try {
     const decoded = decodeURIComponent(segment);

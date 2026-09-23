@@ -50,6 +50,20 @@ export type {
   TypeweaverHonoRequestOptions,
 };
 
+/**
+ * Abstract base class for typeweaver-generated Hono routers.
+ *
+ * Extends Hono with typeweaver-specific features:
+ * - Automatic request validation using generated validators
+ * - Configurable error handling for validation, HTTP, and unknown errors
+ * - Type-safe request/response handling with adapters
+ *
+ * @template RequestHandlers - Object containing typed request handler methods
+ * @template HonoEnv - Hono environment type (default: BlankEnv)
+ * @template HonoSchema - Hono schema type (default: BlankSchema)
+ * @template HonoBasePath - Base path for routes (default: "/")
+ * @template TValidateRequests - Request validation mode (default: true)
+ */
 export abstract class TypeweaverHono<
   RequestHandlers,
   HonoEnv extends Env = BlankEnv,
@@ -57,7 +71,14 @@ export abstract class TypeweaverHono<
   HonoBasePath extends string = "/",
   TValidateRequests extends boolean = true,
 > extends Hono<HonoEnv, HonoSchema, HonoBasePath> {
+  /**
+   * Adapter for converting between Hono and typeweaver request/response formats.
+   */
   protected readonly adapter = new HonoAdapter();
+
+  /**
+   * Request handlers provided during construction.
+   */
   protected readonly requestHandlers: RequestHandlers;
   private readonly config: {
     readonly validateRequests: boolean;
@@ -66,6 +87,19 @@ export abstract class TypeweaverHono<
   };
   private readonly defaultHandlers = createDefaultHonoErrorHandlers();
 
+  /**
+   * Creates a new TypeweaverHono router instance.
+   *
+   * @param options - Configuration options including request handlers and error handling
+   * @param options.requestHandlers - Object containing all request handler methods
+   * @param options.validateRequests - Whether to validate requests (default: true)
+   * @param options.validateResponses - Whether to validate responses (default: true)
+   * @param options.handleHttpResponseErrors - Handler or boolean for HTTP errors (default: true)
+   * @param options.handleRequestValidationErrors - Handler or boolean for request validation errors (default: true)
+   * @param options.handleBodyParseErrors - Handler or boolean for body parse errors (default: true)
+   * @param options.handleResponseValidationErrors - Handler or boolean for response validation errors (default: true)
+   * @param options.handleUnknownErrors - Handler or boolean for unknown errors (default: true)
+   */
   public constructor(options: TypeweaverHonoOptions<RequestHandlers, HonoEnv, TValidateRequests>) {
     const {
       requestHandlers,
@@ -81,6 +115,11 @@ export abstract class TypeweaverHono<
       getPath,
     } = options;
 
+    // Forward only Hono's own option keys: its constructor `Object.assign`s the
+    // received options onto the instance, so TypeWeaver-specific handlers must
+    // never leak there. The rest-destructure that would do this automatically
+    // cannot be typed under `exactOptionalPropertyTypes` because the options
+    // type intersects a conditional type.
     super({
       ...(strict === undefined ? {} : { strict }),
       ...(router === undefined ? {} : { router }),
@@ -114,12 +153,29 @@ export abstract class TypeweaverHono<
     };
   }
 
+  /**
+   * Registers the global error handler with Hono.
+   * Processes errors in order: validation, HTTP response, unknown.
+   *
+   * TODO: The constructor does not call this because Hono's native `onError`
+   * handler does not work in this context: only validation errors were
+   * caught, other errors were not handled. `handleRequest` therefore catches
+   * errors itself and routes them through `handleError`. Once `onError`
+   * handles every error here, register this handler and drop that try/catch
+   * logic.
+   */
   protected registerErrorHandler(): void {
     this.onError(async (error, context) =>
       this.adapter.toResponse(await this.handleError(error, context)),
     );
   }
 
+  /**
+   * Resolves an error through the configured handlers in order: request
+   * validation, HTTP response, unknown. A handler that throws falls through to
+   * the next one; when no enabled handler produces a response, the original
+   * error is rethrown.
+   */
   protected async handleError(error: unknown, context: Context): Promise<IHttpResponse> {
     return handleHonoError({
       error,
@@ -128,6 +184,12 @@ export abstract class TypeweaverHono<
     });
   }
 
+  /**
+   * Handles a request with validation and type-safe response conversion.
+   *
+   * @param options - Hono context, operation metadata, validators, and handler
+   * @returns Hono-compatible Response object
+   */
   protected async handleRequest<
     TRequest extends IRawHttpRequest | IValidatedHttpRequest,
     TResponse extends IHttpResponse,

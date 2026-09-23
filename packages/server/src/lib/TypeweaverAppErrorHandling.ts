@@ -79,6 +79,24 @@ export const defaultUnknownHandler: UnknownErrorHandler =
     body: INTERNAL_SERVER_ERROR_BODY,
   });
 
+/**
+ * Validates a response against the operation's response validator.
+ *
+ * Behavior depends on configuration:
+ * - `validateResponses: false` → returns the original response unchanged.
+ * - `validateResponses: true` (default) → runs validation:
+ *   - Valid response → returns the stripped response (extra fields removed).
+ *   - Invalid response + handler configured → calls the handler safely.
+ *     If the handler throws, fails closed with a sanitized 500 response.
+ *   - Invalid response + `handleResponseValidationErrors: false` → returns
+ *     the original (invalid) response as-is.
+ *
+ * @param options.route - The route definition containing the response validator and config
+ * @param options.response - The response to validate
+ * @param options.ctx - The server context for the current request
+ * @param options.safeOnError - Reports an error thrown by the configured handler
+ * @returns The validated (and stripped) response, the handler's response, or the original
+ */
 export async function validateAppResponse(options: {
   readonly route: RouteDefinition;
   readonly response: IHttpResponse;
@@ -105,6 +123,11 @@ export async function validateAppResponse(options: {
   return defaultResponseValidationHandler(result.error, response, ctx);
 }
 
+/**
+ * Handle errors using the route's configured error handlers.
+ * Processes errors in order: request validation, HTTP response, unknown.
+ * Rethrows the original error when no enabled handler produces a response.
+ */
 export async function handleAppError(options: {
   readonly error: unknown;
   readonly ctx: ServerContext;
@@ -221,6 +244,17 @@ function resolveErrorHandler<T extends (...args: never[]) => unknown>(
   return option;
 }
 
+/**
+ * Safely executes an error handler and returns null if it fails.
+ * This allows for graceful fallback to the next handler in the chain
+ * without crashing the request pipeline.
+ *
+ * If the handler throws, the error is reported via `safeOnError`
+ * and null is returned so the caller can fall through to the next handler.
+ *
+ * @param handlerFn - Function that executes the error handler
+ * @returns The handler's response if successful, null if the handler throws
+ */
 async function safelyExecuteErrorHandler(
   handlerFn: () => Promise<IHttpResponse> | IHttpResponse,
   safeOnError: (error: unknown) => void

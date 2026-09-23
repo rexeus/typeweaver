@@ -86,6 +86,23 @@ export async function handleHonoError(options: {
   throw error;
 }
 
+/**
+ * Validates a response against the operation's response validator.
+ *
+ * Behavior depends on configuration:
+ * - `validateResponses: false` → returns the original response unchanged.
+ * - `validateResponses: true` (default) → runs validation:
+ *   - Valid response → returns the stripped response (extra fields removed).
+ *   - Invalid response + handler configured → calls the handler safely.
+ *     If the handler throws, fails closed with a sanitized 500 response.
+ *   - Invalid response + `handleResponseValidationErrors: false` → returns
+ *     the original (invalid) response as-is.
+ *
+ * @param options.responseValidator - The response validator for the operation
+ * @param options.response - The response to validate
+ * @param options.context - The Hono context for the current request
+ * @returns The validated (and stripped) response, the handler's response, or the original
+ */
 export async function validateHonoResponse(options: {
   readonly validateResponses: boolean;
   readonly responseValidator: IResponseValidator;
@@ -115,6 +132,13 @@ export async function validateHonoResponse(options: {
   return defaultResponseValidationHandler(result.error, response, context);
 }
 
+/**
+ * Resolves error handler configuration to a handler function or undefined.
+ *
+ * @param option - Boolean to enable/disable or custom handler function
+ * @param defaultHandler - Default handler to use when option is true or omitted
+ * @returns Resolved handler function or undefined if disabled
+ */
 export function resolveHonoErrorHandler<T extends (...args: never[]) => unknown>(
   option: T | boolean | undefined,
   defaultHandler: T,
@@ -124,6 +148,14 @@ export function resolveHonoErrorHandler<T extends (...args: never[]) => unknown>
   return option;
 }
 
+/**
+ * Safely executes an error handler and returns null if it fails.
+ * This allows for graceful fallback to the next handler in the chain
+ * without crashing the request pipeline.
+ *
+ * @param handlerFn - Function that executes the error handler
+ * @returns The handler's response if successful, null if the handler throws
+ */
 export async function safelyExecuteErrorHandler(
   handlerFn: () => Promise<IHttpResponse> | IHttpResponse,
 ): Promise<IHttpResponse | null> {

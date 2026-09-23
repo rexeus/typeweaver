@@ -30,6 +30,7 @@ export type RouteDefinition = {
   readonly requestValidator: IRequestValidator<IValidatedHttpRequest>;
   readonly responseValidator: IResponseValidator;
   readonly handler: ErasedRequestHandler;
+  /** Reference to the router config for error handling. */
   readonly routerConfig: RouterErrorConfig;
 };
 

@@ -57,8 +57,9 @@ function canonicalHeaderRecordKey(
 }
 
 /**
- * Splits comma-separated header strings into arrays per RFC 7230. Only
- * applies to fields where the schema expects an array type.
+ * Splits comma-separated header strings into arrays per RFC 7230.
+ * Only applies to fields where the schema expects an array type.
+ * Values that are already arrays pass through unchanged.
  */
 export function splitCommaDelimitedValues(
   header: object,
@@ -90,8 +91,9 @@ export function splitCommaDelimitedValues(
 }
 
 /**
- * Adds a value to the coerced object, preserving all values as arrays when
- * duplicate keys collide.
+ * Adds a value to the coerced object, handling collisions when multiple
+ * values exist for the same key (e.g., duplicate headers with different
+ * casing). Preserves all values as arrays when collisions occur.
  */
 export function addValueToCoerced(
   coerced: Record<string, unknown | unknown[]>,
@@ -110,6 +112,8 @@ export function addValueToCoerced(
     : [existing];
   const newArray: unknown[] = Array.isArray(newValue) ? newValue : [newValue];
   const merged = [...existingArray, ...newArray];
+  // If schema expects a single value but we have multiple, preserve as array
+  // to avoid data loss (validation will catch this later)
   setOwnValue(
     coerced,
     key,
@@ -117,14 +121,20 @@ export function addValueToCoerced(
   );
 }
 
-/** Reads an own property so dynamic keys cannot use inherited values. */
+/**
+ * Reads an own property only. Dynamic record/header keys such as
+ * `constructor` or `toString` must not collide with inherited values.
+ */
 function getOwnValue<TValue>(
   source: Record<string, TValue>,
   key: string
 ): TValue | undefined {
   return Object.hasOwn(source, key) ? source[key] : undefined;
 }
-/** Writes an own enumerable property without treating `__proto__` specially. */
+/**
+ * Writes an own enumerable data property. Dynamic keys such as `__proto__`
+ * become ordinary keys rather than mutating the object prototype.
+ */
 export function setOwnValue<TValue>(
   target: Record<string, TValue>,
   key: string,
@@ -137,7 +147,11 @@ export function setOwnValue<TValue>(
     configurable: true,
   });
 }
-/** Aligns scalar and array values with the schema's expected cardinality. */
+/**
+ * Coerces a value's structure to match schema expectations.
+ * Wraps single values in arrays when schema expects array type,
+ * unwraps single-element arrays when schema expects single value.
+ */
 function coerceValueStructure(
   value: unknown,
   expectsArray: boolean
@@ -148,7 +162,11 @@ function coerceValueStructure(
   return value;
 }
 
-/** Restores schema-defined casing after case-insensitive coercion. */
+/**
+ * Maps normalized (lowercase) keys back to their original casing as defined
+ * in the schema. Used for case-insensitive matching where the output should
+ * preserve schema-defined casing.
+ */
 export function mapToOriginalKeys(
   coerced: Record<string, unknown | unknown[]>,
   schemaMap: Map<string, { readonly originalKey: string }>

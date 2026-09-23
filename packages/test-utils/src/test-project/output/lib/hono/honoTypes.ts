@@ -98,7 +98,10 @@ export type TypeweaverHonoOptions<
   HonoEnv extends Env = BlankEnv,
   TValidateRequests extends boolean = true,
 > = HonoOptions<HonoEnv> & {
-  /** Request handler methods for each operation. */
+  /**
+   * Request handler methods for each operation.
+   * Each handler receives a request whose shape matches the validation mode.
+   */
   readonly requestHandlers: RequestHandlers;
   /**
    * Enable request validation using generated validators.
@@ -133,7 +136,8 @@ export type TypeweaverHonoOptions<
   /**
    * Configure handling of response validation errors.
    * - `true`: Use the default 500 Internal Server Error handler
-   * - `false`: Disable response validation error handling
+   * - `false`: Disable response validation error handling (return the
+   *   response as-is)
    * - `function`: Use a custom response validation error handler
    * @default true
    */

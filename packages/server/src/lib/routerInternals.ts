@@ -13,6 +13,11 @@ type StaticSegmentToken = { readonly kind: "static"; readonly value: string };
 type ParamSegmentToken = { readonly kind: "param"; readonly name: string };
 export type SegmentToken = StaticSegmentToken | ParamSegmentToken;
 
+/**
+ * A parsed path segment: literal text interleaved with canonical `:name`
+ * placeholders. `shape` identifies the literal structure independently of the
+ * placeholder names so ambiguous renames can be detected at registration.
+ */
 export type SegmentPattern = {
   readonly tokens: readonly SegmentToken[];
   readonly parameterNames: readonly string[];
@@ -25,6 +30,14 @@ export type DynamicSegmentChild = {
   readonly node: RadixNode;
 };
 
+/**
+ * A node in the radix tree.
+ *
+ * Each node represents a single path segment.
+ * Static children are stored in a `Map` keyed by the exact segment string.
+ * Dynamic (placeholder-bearing) children are keyed by their literal shape.
+ * Leaf nodes store a `Map` of HTTP method → route definition.
+ */
 export type RadixNode = {
   readonly staticChildren: Map<string, RadixNode>;
   readonly dynamicChildren: Map<string, DynamicSegmentChild>;
@@ -89,6 +102,12 @@ export function descend(
   return child;
 }
 
+/**
+ * Parses one path segment into literal and canonical `:name` placeholder
+ * tokens. A `:` without a following `[A-Za-z0-9_]` name character stays
+ * literal. Adjacent placeholders without a static separator are ambiguous and
+ * rejected.
+ */
 export function parseSegment(segment: string, path: string): SegmentPattern {
   const tokens: SegmentToken[] = [];
   let staticBuffer = "";
@@ -130,6 +149,10 @@ export function parseSegment(segment: string, path: string): SegmentPattern {
   return { tokens, parameterNames, staticLength, shape };
 }
 
+/**
+ * Reads a canonical `:name` placeholder starting at `start`. A `:` without a
+ * following `[A-Za-z0-9_]` name character is not a placeholder.
+ */
 function readPlaceholder(
   segment: string,
   start: number

@@ -37,9 +37,28 @@ export type {
   UnknownErrorHandler,
 };
 
+/**
+ * High-performance radix tree router with path parameter support.
+ *
+ * Routes are stored in a tree structure where each level corresponds
+ * to a path segment. This gives O(d) lookup time where d is the depth
+ * (number of segments) of the URL — independent of the total number
+ * of registered routes.
+ *
+ * Supports:
+ * - Static paths: `/accounts`
+ * - Named parameters: `/todos/:todoId`
+ * - Multiple parameters: `/todos/:todoId/subtodos/:subtodoId`
+ * - Embedded parameters within one segment: `/files/:fileId.:format`
+ * - Automatic HEAD → GET fallback (per HTTP spec)
+ * - 405 Method Not Allowed detection with `Allow` header
+ */
 export class Router {
   private readonly root = createNode();
 
+  /**
+   * Register a route in the radix tree.
+   */
   public add(definition: RouteDefinition): void {
     assertPathHasNoReservedParameter(definition.path);
     const method = definition.method.toUpperCase();
@@ -56,6 +75,18 @@ export class Router {
     current.methods.set(method, normalizedDefinition);
   }
 
+  /**
+   * Find a matching route for the given method and path.
+   *
+   * Traverses the radix tree in O(d) time where d is the number
+   * of path segments. Static segments are matched first (exact match),
+   * then parameterized segments are tried as fallback.
+   *
+   * For HEAD requests, automatically falls back to the GET handler
+   * if no explicit HEAD handler is registered (per HTTP spec).
+   *
+   * @returns The matched route with extracted path parameters, or `undefined` if no match.
+   */
   public match(method: string, path: string): RouteMatch | undefined {
     const upperMethod = method.toUpperCase();
     const params: Record<string, string> = Object.create(null) as Record<string, string>;
@@ -68,6 +99,14 @@ export class Router {
     return definition === undefined ? undefined : { route: definition, params };
   }
 
+  /**
+   * Find a matching node for the given path, regardless of HTTP method.
+   *
+   * Used to distinguish "path not found" (404) from "method not allowed" (405).
+   * A registered GET implies HEAD in the returned allowed methods.
+   *
+   * @returns The allowed methods for this path, or `undefined` if the path doesn't exist.
+   */
   public matchPath(path: string): { allowedMethods: string[] } | undefined {
     const params: Record<string, string> = Object.create(null) as Record<string, string>;
     const node = traverse(this.root, toSegments(path), 0, params);
