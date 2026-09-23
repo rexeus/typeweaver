@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { HttpStatusCode, isTypedHttpResponse } from "../../src/index.js";
-import { TestObjectTrapError } from "../errors/index.js";
+import { HttpStatusCode, isTypedHttpResponse } from "../../../src/index.js";
+import { TestObjectTrapError } from "../../errors/index.js";
 
 describe("isTypedHttpResponse property access failures", () => {
   test("propagates errors from a throwing statusCode getter", () => {

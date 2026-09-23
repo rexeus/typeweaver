@@ -1,11 +1,98 @@
 import { describe, expect, test } from "vitest";
 import { z } from "zod";
 import {
-  ResponseDefinitionMergeError,
   defineDerivedResponse,
   defineResponse,
-} from "../../src/defineResponse.js";
-import { HttpStatusCode } from "../../src/HttpStatusCode.js";
+  ResponseDefinitionMergeError,
+} from "../../../src/defineResponse.js";
+import { HttpStatusCode } from "../../../src/HttpStatusCode.js";
+
+describe("defineDerivedResponse body and field merging", () => {
+  test("derived responses merge object body schemas across derivation levels", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      body: z.object({ code: z.string() }),
+    });
+    const validationError = defineDerivedResponse(base, {
+      name: "ValidationError",
+      body: z.object({ field: z.string() }),
+    });
+
+    const signupValidationError = defineDerivedResponse(validationError, {
+      name: "SignupValidationError",
+      body: z.object({ form: z.string() }),
+    });
+
+    const bodySchema = signupValidationError.body;
+
+    expect(
+      bodySchema?.safeParse({
+        code: "invalid",
+        field: "email",
+        form: "signup",
+      }).success
+    ).toBe(true);
+    expect(
+      bodySchema?.safeParse({
+        field: "email",
+        form: "signup",
+      }).success
+    ).toBe(false);
+    expect(
+      bodySchema?.safeParse({
+        code: 400,
+        field: "email",
+        form: "signup",
+      }).success
+    ).toBe(false);
+    expect(
+      bodySchema?.safeParse({
+        code: "invalid",
+        form: "signup",
+      }).success
+    ).toBe(false);
+  });
+
+  test("child body fields override parent fields with the same name", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      body: z.object({ code: z.literal("parent") }),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      body: z.object({ code: z.literal("child") }),
+    });
+
+    expect(child.body?.safeParse({ code: "child" }).success).toBe(true);
+    expect(child.body?.safeParse({ code: "parent" }).success).toBe(false);
+  });
+
+  test("child header fields override parent header fields with the same name", () => {
+    const base = defineResponse({
+      name: "BaseError",
+      statusCode: HttpStatusCode.BAD_REQUEST,
+      description: "Base error",
+      header: z.object({ "x-request-id": z.literal("parent") }),
+    });
+
+    const child = defineDerivedResponse(base, {
+      name: "ChildError",
+      header: z.object({ "x-request-id": z.literal("child") }),
+    });
+
+    expect(child.header?.safeParse({ "x-request-id": "child" }).success).toBe(
+      true
+    );
+    expect(child.header?.safeParse({ "x-request-id": "parent" }).success).toBe(
+      false
+    );
+  });
+});
 
 describe("defineDerivedResponse optional header merging", () => {
   test("derived responses merge optional object header schemas", () => {
@@ -138,87 +225,6 @@ describe("defineDerivedResponse required header merging", () => {
         "x-trace-id": "trace-1",
       }).success
     ).toBe(true);
-  });
-});
-
-describe("defineDerivedResponse omitted fields", () => {
-  test("inherits parent statusCode and description when not overridden", () => {
-    const base = defineResponse({
-      name: "ParentResponse",
-      statusCode: HttpStatusCode.NOT_FOUND,
-      description: "Not found",
-    });
-
-    const child = defineDerivedResponse(base, {
-      name: "ChildResponse",
-    });
-
-    expect(child.statusCode).toBe(HttpStatusCode.NOT_FOUND);
-    expect(child.description).toBe("Not found");
-  });
-
-  test("inherits parent body when child omits body", () => {
-    const body = z.object({ id: z.string() });
-    const base = defineResponse({
-      name: "ParentResponse",
-      statusCode: HttpStatusCode.OK,
-      description: "Ok",
-      body,
-    });
-
-    const child = defineDerivedResponse(base, {
-      name: "ChildResponse",
-    });
-
-    expect(child.body).toBe(body);
-  });
-
-  test("inherits parent header when child omits header", () => {
-    const header = z.object({ "x-request-id": z.string() });
-    const base = defineResponse({
-      name: "ParentResponse",
-      statusCode: HttpStatusCode.OK,
-      description: "Ok",
-      header,
-    });
-
-    const child = defineDerivedResponse(base, {
-      name: "ChildResponse",
-    });
-
-    expect(child.header).toBe(header);
-  });
-
-  test("uses child body when parent omits body", () => {
-    const body = z.object({ id: z.string() });
-    const base = defineResponse({
-      name: "ParentResponse",
-      statusCode: HttpStatusCode.OK,
-      description: "Ok",
-    });
-
-    const child = defineDerivedResponse(base, {
-      name: "ChildResponse",
-      body,
-    });
-
-    expect(child.body).toBe(body);
-  });
-
-  test("uses child header when parent omits header", () => {
-    const header = z.object({ "x-request-id": z.string() });
-    const base = defineResponse({
-      name: "ParentResponse",
-      statusCode: HttpStatusCode.OK,
-      description: "Ok",
-    });
-
-    const child = defineDerivedResponse(base, {
-      name: "ChildResponse",
-      header,
-    });
-
-    expect(child.header).toBe(header);
   });
 });
 

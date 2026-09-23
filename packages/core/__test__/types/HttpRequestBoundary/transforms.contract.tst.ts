@@ -1,38 +1,14 @@
 import { expectTypeOf } from "vitest";
 import { z } from "zod";
+import { defineOperation } from "../../../src/index.js";
 import {
-  defineOperation,
-  defineResponse,
-  HttpMethod,
-  HttpStatusCode,
-} from "../../src/index.js";
+  operationWithQuery,
+  operationWithQueryRecordValue,
+} from "./fixtures.js";
 import type {
   HttpRequestBoundaryIssues,
   RequestDefinition,
-} from "../../src/index.js";
-
-const successResponse = defineResponse({
-  name: "HttpBoundarySuccess",
-  statusCode: HttpStatusCode.OK,
-  description: "A typed HTTP-boundary request was accepted.",
-  header: z.object({}),
-  body: z.object({ ok: z.literal(true) }),
-});
-
-const operationWithQuery = <TQuery extends RequestDefinition["query"]>(
-  query: TQuery
-) => ({
-  operationId: "boundaryQuery",
-  path: "/metrics",
-  method: HttpMethod.GET,
-  summary: "Boundary query",
-  request: { query },
-  responses: [successResponse],
-});
-
-const operationWithQueryRecordValue = <TValue extends z.ZodType>(
-  value: TValue
-) => operationWithQuery(z.record(z.string(), value));
+} from "../../../src/index.js";
 
 // A bare unknown/any pipe input delegates raw acceptance to the downstream
 // schema; ordinary typed string transforms and array-input pipes keep their

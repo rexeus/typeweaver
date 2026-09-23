@@ -3,9 +3,9 @@ import {
   HttpStatusCode,
   isTypedHttpResponse,
   toHttpResponse,
-} from "../../src/index.js";
-import { TestApplicationError } from "../errors/index.js";
-import type { ITypedHttpResponse } from "../../src/index.js";
+} from "../../../src/index.js";
+import { TestApplicationError } from "../../errors/index.js";
+import type { ITypedHttpResponse } from "../../../src/index.js";
 
 const valuesThatAreNotTypedResponses: readonly {
   readonly case: string;

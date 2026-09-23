@@ -1,29 +1,17 @@
 import { expectTypeOf } from "vitest";
 import { z } from "zod";
-import {
-  defineOperation,
-  defineResponse,
-  HttpMethod,
-  HttpStatusCode,
-} from "../../src/index.js";
+import { defineOperation, HttpMethod } from "../../../src/index.js";
+import { successResponse } from "./fixtures.js";
 import type {
   HttpRequestBoundaryIssues,
   IHttpRequest,
   IRawHttpRequestFor,
   RequestDefinition,
-} from "../../src/index.js";
+} from "../../../src/index.js";
 
 expectTypeOf<
   HttpRequestBoundaryIssues<RequestDefinition>
 >().toEqualTypeOf<never>();
-
-const successResponse = defineResponse({
-  name: "HttpBoundarySuccess",
-  statusCode: HttpStatusCode.OK,
-  description: "A typed HTTP-boundary request was accepted.",
-  header: z.object({}),
-  body: z.object({ ok: z.literal(true) }),
-});
 
 const validBoundaryOperation = defineOperation({
   operationId: "readMetric",

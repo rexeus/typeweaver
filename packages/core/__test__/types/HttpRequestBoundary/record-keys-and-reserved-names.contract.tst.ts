@@ -1,30 +1,6 @@
 import { z } from "zod";
-import {
-  defineOperation,
-  defineResponse,
-  HttpMethod,
-  HttpStatusCode,
-} from "../../src/index.js";
-import type { RequestDefinition } from "../../src/index.js";
-
-const successResponse = defineResponse({
-  name: "HttpBoundarySuccess",
-  statusCode: HttpStatusCode.OK,
-  description: "A typed HTTP-boundary request was accepted.",
-  header: z.object({}),
-  body: z.object({ ok: z.literal(true) }),
-});
-
-const operationWithQuery = <TQuery extends RequestDefinition["query"]>(
-  query: TQuery
-) => ({
-  operationId: "boundaryQuery",
-  path: "/metrics",
-  method: HttpMethod.GET,
-  summary: "Boundary query",
-  request: { query },
-  responses: [successResponse],
-});
+import { defineOperation, HttpMethod } from "../../../src/index.js";
+import { operationWithQuery, successResponse } from "./fixtures.js";
 
 // Record key schemas must preserve key identity. Detectable pipes/transforms
 // and non-string key schemas are rejected; plain string, string refinements,
