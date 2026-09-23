@@ -79,8 +79,9 @@ Tests normally live in `__test__/` and use `*.test.ts`; shared factories and the
 belong in `packages/test-utils`. When a suite outgrows the test file budget, split it into a
 directory named after its subject (for example `__test__/unit/ApiClient/`) with files named for the
 behavior they cover, and move setup that two or more of those files need into one shared module in
-that directory (for example `fixtures.ts`). Do not copy setup between test files. Gates that select
-tests by path select suite directories, so a later split stays covered. Run the CLI locally with
+that directory (for example `fixtures.ts`). Do not copy setup between test files. Vitest gates that
+select tests by path name suite directories or unsplit test files, which `pnpm verify:test-gates`
+enforces, so a later split stays covered. Run the CLI locally with
 `pnpm --filter @rexeus/typeweaver run cli -- <arguments>`. After a full build, run the frozen
 install again to recreate CLI binary symlinks before generation or bundle tests.
 
