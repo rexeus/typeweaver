@@ -35,6 +35,27 @@ export const writeTestScopeFixtures = fixtureRoot => {
 };
 
 /**
+ * Generated output is ignored only at its anchored locations. A source
+ * directory that merely happens to be named `output` or `outputs` stays inside
+ * the type-aware policy, so an explicit `any` there must fail lint.
+ */
+const outputLookalikeDirectories = ["src/output", "src/outputs"];
+
+/**
+ * @param {string} fixtureRoot
+ * @returns {void}
+ */
+export const writeOutputLookalikeFixtures = fixtureRoot => {
+  for (const directory of outputLookalikeDirectories) {
+    mkdirSync(path.join(fixtureRoot, directory), { recursive: true });
+    writeFileSync(
+      path.join(fixtureRoot, directory, "explicit-any.invalid.ts"),
+      "export const value: any = 1;\n"
+    );
+  }
+};
+
+/**
  * @param {string} fixtureRoot
  * @returns {void}
  */
@@ -106,6 +127,27 @@ const assertTestScopeCase = (diagnostics, fixtureRoot) => {
         invalidDiagnostics.map(diagnostic => diagnostic.code)
       )})`
     );
+  }
+};
+
+/**
+ * @param {readonly LintDiagnostic[]} diagnostics
+ * @param {string} fixtureRoot
+ * @returns {void}
+ */
+const assertOutputLookalikeCases = (diagnostics, fixtureRoot) => {
+  for (const directory of outputLookalikeDirectories) {
+    const found = diagnosticsForPath(
+      diagnostics,
+      path.join(fixtureRoot, directory, "explicit-any.invalid.ts")
+    );
+    if (!found.some(item => item.code === "typescript(no-explicit-any)")) {
+      throw new Error(
+        `output-lookalike: ${directory} escaped the lint policy (got ${JSON.stringify(
+          found.map(item => item.code)
+        )})`
+      );
+    }
   }
 };
 
@@ -191,6 +233,7 @@ const assertDenyWarnings = fixtureRoot => {
  */
 export const assertLintPolicyProbes = (diagnostics, fixtureRoot) => {
   assertTestScopeCase(diagnostics, fixtureRoot);
+  assertOutputLookalikeCases(diagnostics, fixtureRoot);
   assertUnusedDisableCase(diagnostics, fixtureRoot);
   assertDenyWarnings(fixtureRoot);
   assertStricterMaintainabilityProbes(fixtureRoot);

@@ -34,6 +34,16 @@ export const expectedRootRules = {
 
 /** @type {Record<string, unknown>} */
 export const expectedTypeScriptRules = {
+  "typescript/ban-ts-comment": [
+    "error",
+    {
+      "ts-expect-error": "allow-with-description",
+      "ts-ignore": true,
+      "ts-nocheck": true,
+      "ts-check": false,
+      minimumDescriptionLength: 3,
+    },
+  ],
   "typescript/consistent-type-definitions": ["error", "type"],
   "typescript/no-explicit-any": "error",
   "typescript/no-floating-promises": "error",
@@ -47,12 +57,17 @@ export const expectedTypeScriptRules = {
   "typescript/switch-exhaustiveness-check": "error",
 };
 
+/**
+ * Generated output is ignored only at its real, anchored locations: the
+ * committed CLI test project and the gitignored per-package `test/outputs`
+ * generation targets. A directory merely named `output` elsewhere is linted.
+ */
 export const expectedIgnorePatterns = [
   "**/dist/**",
   "**/node_modules/**",
   ".vscode/**",
-  "**/output/**",
-  "**/outputs/**",
+  "packages/test-utils/src/test-project/output/**",
+  "packages/*/test/outputs/**",
 ];
 
 export const expectedTestFiles = [

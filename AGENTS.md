@@ -58,7 +58,9 @@ decision. Install with `pnpm install --frozen-lockfile`.
 - Establish a failing test or characterization before changing behavior. Run the narrow package
   check after each logical change, then the required repository gate.
 - Prefer `unknown` plus explicit validation at external boundaries. Do not introduce `any`, unsafe
-  assertions, ignored type errors, skipped tests, or muted lint rules to pass a gate.
+  assertions, ignored type errors, skipped tests, or muted lint rules to pass a gate. Lint rejects
+  `@ts-ignore` and `@ts-nocheck`; a type test's `@ts-expect-error` must state why the error is
+  expected.
 - Keep code inside the enforced cognitive and structural limits: cognitive complexity is 12, classic
   cyclomatic complexity is 10, and imports are limited to 10 including type-only imports. Resolve
   findings by cohesive decomposition. Do not add a size allowlist, per-file override, or unlisted

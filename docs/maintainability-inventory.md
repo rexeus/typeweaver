@@ -38,19 +38,24 @@ peer; that separate linter is neither declared nor installed.
 `packages/**` are analyzed with type information. The semantic rules are enforced for authored
 package source and the package test overlay:
 
-| Rule                                     | Purpose                                            |
-| ---------------------------------------- | -------------------------------------------------- |
-| `typescript/consistent-type-definitions` | Require `type` aliases over `interface`.           |
-| `typescript/no-explicit-any`             | Reject explicit `any`.                             |
-| `typescript/no-floating-promises`        | Reject unhandled Promise results.                  |
-| `typescript/no-misused-promises`         | Reject Promises used in a non-Promise position.    |
-| `typescript/no-non-null-assertion`       | Reject `!` assertions.                             |
-| `typescript/no-unsafe-argument`          | Reject `any` flowing into typed parameters.        |
-| `typescript/no-unsafe-assignment`        | Reject `any` assignments.                          |
-| `typescript/no-unsafe-call`              | Reject calls on `any`.                             |
-| `typescript/no-unsafe-member-access`     | Reject member access on `any`.                     |
-| `typescript/no-unsafe-return`            | Reject returning `any` from a typed function.      |
-| `typescript/switch-exhaustiveness-check` | Require exhaustive switches over unions and enums. |
+| Rule                                     | Purpose                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `typescript/ban-ts-comment`              | Reject `@ts-ignore` and `@ts-nocheck`; require a described `@ts-expect-error`. |
+| `typescript/consistent-type-definitions` | Require `type` aliases over `interface`.                                       |
+| `typescript/no-explicit-any`             | Reject explicit `any`.                                                         |
+| `typescript/no-floating-promises`        | Reject unhandled Promise results.                                              |
+| `typescript/no-misused-promises`         | Reject Promises used in a non-Promise position.                                |
+| `typescript/no-non-null-assertion`       | Reject `!` assertions.                                                         |
+| `typescript/no-unsafe-argument`          | Reject `any` flowing into typed parameters.                                    |
+| `typescript/no-unsafe-assignment`        | Reject `any` assignments.                                                      |
+| `typescript/no-unsafe-call`              | Reject calls on `any`.                                                         |
+| `typescript/no-unsafe-member-access`     | Reject member access on `any`.                                                 |
+| `typescript/no-unsafe-return`            | Reject returning `any` from a typed function.                                  |
+| `typescript/switch-exhaustiveness-check` | Require exhaustive switches over unions and enums.                             |
+
+`typescript/ban-ts-comment` allows `@ts-expect-error` only with a description of at least three
+characters, which is the form the type tests use. `typescript/no-unsafe-type-assertion` is not
+enabled yet: it reports 339 existing assertions and remains a known gap.
 
 The root profile also enforces `eslint/no-eval`, `eslint/no-implied-eval`, `eslint/no-new-func`,
 `unicorn/prefer-node-protocol`, the local `typeweaver/pure-barrel` rule, and the import hygiene
@@ -104,10 +109,13 @@ runtime implementation mixed into that barrel fails lint.
 
 ## Generated-code and exclusion policy
 
-`ignorePatterns` excludes `**/dist/**`, `**/node_modules/**`, `.vscode/**`, `**/output/**`, and
-`**/outputs/**`. The authored-source override additionally excludes `tsdown.config.ts`,
-`examples/**`, `fixtures/**`, `test-fixtures/**`, and `serve-*.ts` from the structural/semantic
-profile.
+`ignorePatterns` excludes `**/dist/**`, `**/node_modules/**`, `.vscode/**`, and the two real
+generated locations: the committed CLI test project `packages/test-utils/src/test-project/output/**`
+and the gitignored per-package generation targets `packages/*/test/outputs/**`. The exclusions are
+anchored, so a source directory that merely happens to be named `output` or `outputs` is linted. The
+suppression-directive scanner derives its skipped paths from the same patterns. The authored-source
+override additionally excludes `tsdown.config.ts`, `examples/**`, `fixtures/**`, `test-fixtures/**`,
+and `serve-*.ts` from the structural/semantic profile.
 
 Generated code is governed at its source: change authoring definitions, generators, or templates and
 regenerate fixtures; never hand-edit generated output. `pnpm verify:generated` reproduces the
@@ -136,15 +144,15 @@ stale entry can never remain silent.
 
 ## Executable contracts
 
-| Command                          | Contract it proves                                                                                                                                         |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm test:maintainability-lint` | Exact valid/invalid boundaries for the 10 maintainability rules, the allowlist scanner, and the no-ESLint runtime guard.                                   |
-| `pnpm test:lint-policy`          | 22 lint rules, 250/350 file-size, cognitive, dependency, barrel, test-scope, unused-disable, `--deny-warnings`, and 20 configuration-weakening rejections. |
-| `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles.                                                                                  |
-| `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.              |
-| `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                |
-| `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                   |
-| `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                              |
+| Command                          | Contract it proves                                                                                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:maintainability-lint` | Exact boundaries for the 10 maintainability rules, the allowlist scanner and its `ignorePatterns` agreement, and the no-ESLint guard.                                                                   |
+| `pnpm test:lint-policy`          | 25 lint rule cases (3 TS-directive bans), 250/350 file-size, cognitive, dependency, barrel, test-scope, output-lookalike, unused-disable, `--deny-warnings`, and 23 configuration-weakening rejections. |
+| `pnpm test:typescript-toolchain` | 20 compiler options and 18 diagnostics across the four compiler profiles.                                                                                                                               |
+| `pnpm test:quality-contracts`    | `typecheck:scripts` rejects an implicit-any tooling module and `test:tooling` rejects a broken build-config contract, using throwaway copies.                                                           |
+| `pnpm typecheck:scripts`         | Checked JavaScript over every `scripts/**`, `config/tsdown/**`, and `config/oxlint/**` `.mjs` tooling file.                                                                                             |
+| `pnpm test:tooling`              | The root tsdown build-config tests and local config/oxlint plugin tests.                                                                                                                                |
+| `pnpm lint`                      | The full warning-free, type-aware policy over the repository.                                                                                                                                           |
 
 `pnpm verify:architecture-contracts` runs the compiler-profile, lint-policy, maintainability,
 scripts-typecheck, root-tooling, and quality-task guards in a deterministic order alongside the
