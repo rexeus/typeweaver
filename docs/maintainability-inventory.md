@@ -97,8 +97,11 @@ The file-size test classification is exact:
 - `scripts/test-*.mjs`.
 
 The local `typeweaver/pure-barrel` rule is enabled at error level for every linted filename. A file
-containing a direct re-export may contain only imports, type declarations, and export wiring; a
-runtime implementation mixed into that barrel fails lint.
+does barrel wiring when it contains a direct re-export (`export … from` or `export * from`) or a
+local `export { … }` / `export type { … }` without `from` that exports at least one imported
+binding. Such a file may contain only imports, type declarations, and export wiring; a runtime
+implementation mixed into that barrel fails lint. A module that exports only its own declarations is
+not a barrel.
 
 ## Warning and unused-disable policy
 

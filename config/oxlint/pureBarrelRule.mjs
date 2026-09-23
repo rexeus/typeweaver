@@ -42,19 +42,51 @@ const isTypeDeclaration = statement =>
     isTypeDeclaration(statement.declaration));
 
 /**
+ * @param {Specifier} specifier
+ * @param {Set<string>} importedBindings
+ */
+const exportsImportedBinding = (specifier, importedBindings) =>
+  specifier.local?.type === "Identifier" &&
+  importedBindings.has(specifier.local.name);
+
+/**
  * @param {Statement} statement
  * @param {Set<string>} importedBindings
  */
 const isImportedBindingExport = (statement, importedBindings) => {
   if (statement.exportKind === "type") return true;
-  return (statement.specifiers ?? []).every(specifier => {
-    if (specifier.exportKind === "type") return true;
-    return (
-      specifier.local?.type === "Identifier" &&
-      importedBindings.has(specifier.local.name)
-    );
-  });
+  return (statement.specifiers ?? []).every(
+    specifier =>
+      specifier.exportKind === "type" ||
+      exportsImportedBinding(specifier, importedBindings)
+  );
 };
+
+/**
+ * A local `export { … }` or `export type { … }` without `from` that exports an
+ * imported binding is barrel wiring, exactly like `export … from`.
+ *
+ * @param {Statement} statement
+ * @param {Set<string>} importedBindings
+ */
+const isLocalReExport = (statement, importedBindings) =>
+  statement.type === "ExportNamedDeclaration" &&
+  statement.source == null &&
+  statement.declaration == null &&
+  (statement.specifiers ?? []).some(specifier =>
+    exportsImportedBinding(specifier, importedBindings)
+  );
+
+/**
+ * @param {readonly Statement[]} statements
+ * @param {Set<string>} importedBindings
+ */
+const doesBarrelWiring = (statements, importedBindings) =>
+  statements.some(
+    statement =>
+      isDirectReExport(statement) ||
+      isLocalReExport(statement, importedBindings)
+  );
 
 /** @param {readonly Statement[]} statements */
 const importedBindingsFor = statements => {
@@ -117,11 +149,11 @@ const pureBarrelRule = {
     type: "problem",
     docs: {
       description:
-        "Require direct re-export files to contain only barrel wiring",
+        "Require files that re-export imported bindings to contain only barrel wiring",
     },
     messages: {
       mixedImplementation:
-        "Direct re-export files may not contain runtime implementation.",
+        "Files that re-export imported bindings may not contain runtime implementation.",
     },
     schema: [],
   },
@@ -132,8 +164,8 @@ const pureBarrelRule = {
   create(context) {
     return {
       Program(program) {
-        if (!program.body.some(isDirectReExport)) return;
         const importedBindings = importedBindingsFor(program.body);
+        if (!doesBarrelWiring(program.body, importedBindings)) return;
         for (const statement of program.body) {
           if (isAllowedStatement(statement, importedBindings)) continue;
           context.report({ node: statement, messageId: "mixedImplementation" });

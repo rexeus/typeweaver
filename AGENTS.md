@@ -68,8 +68,10 @@ decision. Install with `pnpm install --frozen-lockfile`.
   findings by cohesive decomposition. Do not add a size allowlist, per-file override, or unlisted
   `oxlint-disable` directive; the authored suppression allowlist is exact and tested by
   `pnpm test:maintainability-lint`.
-- Direct re-export files are pure barrels: they may contain imports, type declarations, and export
-  wiring only; runtime implementation mixed into a direct re-export file is rejected.
+- Files that re-export are pure barrels: a file with a direct re-export (`export … from`) or a local
+  `export { … }` / `export type { … }` of an imported binding may contain imports, type
+  declarations, and export wiring only; runtime implementation mixed into it is rejected. Import a
+  name from the module that defines it instead of re-exporting it beside an implementation.
 - Preserve deterministic generation, path safety, transactional publication, and per-call isolation.
 - Public contract changes require runtime and type tests, a Changeset, and migration documentation.
 - Public examples must be executable or mapped to typechecked fixtures.

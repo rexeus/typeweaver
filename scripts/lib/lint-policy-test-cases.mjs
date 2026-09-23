@@ -161,6 +161,18 @@ export const cases = [
     classValidFixture,
     classInvalidFixture,
   ],
+  [
+    "pure-barrel-imported-value-export",
+    "typeweaver(pure-barrel)",
+    'import { namedTarget } from "./importTarget.js";\nexport { namedTarget };\n',
+    'import { namedTarget } from "./importTarget.js";\nexport { namedTarget };\nexport const implementation = namedTarget + 1;\n',
+  ],
+  [
+    "pure-barrel-imported-type-export",
+    "typeweaver(pure-barrel)",
+    'import type { Target } from "./importTarget.js";\nexport type { Target };\n',
+    'import type { Target } from "./importTarget.js";\nexport type { Target };\nexport const implementation: Target = 1;\n',
+  ],
 ].map(tuple => ({
   name: String(tuple[0]),
   rule: String(tuple[1]),
